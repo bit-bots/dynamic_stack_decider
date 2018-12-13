@@ -5,11 +5,11 @@ import re
 import rospy
 from std_msgs.msg import String
 
-from bitbots_dsd.abstract_action_element import AbstractActionElement
-from bitbots_dsd.abstract_decision_element import AbstractDecisionElement
-from bitbots_dsd.abstract_stack_element import AbstractStackElement
-from bitbots_dsd.parser import DSDParser
-from bitbots_dsd.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement
+from dynamic_stack_decider.abstract_action_element import AbstractActionElement
+from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
+from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
+from dynamic_stack_decider.parser import DSDParser
+from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement
 
 
 def discover_elements(path):

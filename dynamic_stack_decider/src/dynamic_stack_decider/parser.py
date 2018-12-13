@@ -1,5 +1,5 @@
 import re
-from bitbots_dsd.tree import Tree, AbstractTreeElement, DecisionTreeElement, ActionTreeElement
+from dynamic_stack_decider.tree import Tree, AbstractTreeElement, DecisionTreeElement, ActionTreeElement
 
 
 class DSDParser:
