@@ -1,0 +1,14 @@
+---
+locations:
+  - display_name: Body Behavior
+    package: bitbots_body_behavior
+    debug_topic: /debug/dsd/body_behavior
+    relative_action_path: src/bitbots_body_behavior/actions
+    relative_decision_path: src/bitbots_body_behavior/decisions
+    relative_dsd_path: src/bitbots_body_behavior/main.dsd
+  - display_name: Head Behavior
+    package: bitbots_head_behavior
+    debug_topic: /debug/dsd/head_behavior
+    relative_action_path: src/bitbots_head_behavior/actions
+    relative_decision_path: src/bitbots_head_behavior/decisions
+    relative_dsd_path: src/bitbots_head_behavior/head_behavior.dsd

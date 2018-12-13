@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(dynamic_stack_decider)
+
+find_package(catkin REQUIRED rospy)
+
+catkin_python_setup()
+
+catkin_package(
+)
+

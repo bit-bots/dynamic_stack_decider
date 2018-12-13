@@ -1,0 +1,41 @@
+<package>
+  <name>dynamic_stack_decider_visualization</name>
+  <version>0.0.1</version>
+  <description>
+    A Python GUI plugin to visualize the bitbots-dynamic-stack-decider (DSD)
+    <br />
+	Loosly based on rqt_graph
+  </description>
+  <maintainer email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</maintainer>
+  <author email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</author>
+  <author email="info@bit-bots.de">Hamburg Bit-Bots</author>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend version_gte="0.2.19">python_qt_binding</run_depend>
+  <run_depend>python-rospkg</run_depend>
+  <run_depend>python_qt_binding</run_depend>
+  <run_depend>qt_dotgraph</run_depend>
+  <run_depend>rosgraph</run_depend>
+  <run_depend>rosgraph_msgs</run_depend>
+  <run_depend>roslib</run_depend>
+  <run_depend>rosnode</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>rosservice</run_depend>
+  <run_depend>rostopic</run_depend>
+  <run_depend>rqt_gui</run_depend>
+  <run_depend>rqt_gui_py</run_depend>
+  <run_depend>bitbots_dsd</run_depend>
+
+  <export>
+    <architecture_independent/>
+    <rqt_gui plugin="${prefix}/plugin_dsd_viz.xml"/>
+    <bitbots_documentation>
+      <status>tested_robot</status>
+      <language>python</language>
+    </bitbots_documentation>
+  </export>
+</package>
+

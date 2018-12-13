@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import os
+import pydot
+import argparse
+
+from bitbots_dsd_visualisation import stackmachine_map
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser("map_stackmachine",
+                                     description="Map any bitbots stackmachine, extract their StackElements and the connections between them")
+    parser.add_argument("--target", choices=stackmachine_map.STACKMACHINE_LOCATIONS.keys(), type=str,
+                        help="Which stackmachine you want to map")
+    parser.add_argument("--path", default=None,
+                        help="Direct path to the stack machine")                        
+    parser.add_argument("--start", type=str, default=None,
+                        help="Root node in the graph. Usable to plot sub graphs of one behavior.", required=False)                        
+    parser.add_argument("--out", type=str, default=os.getcwd(),
+                        help="Where to store the generated map. Defaults to current directory", required=False)
+    parser.add_argument("--format", choices=pydot.Dot().formats, default="svg",
+                        help="In which file format to save the map")
+    parser.add_argument("--bitbots_meta", default="~/bitbots_meta",
+                        help="Where bitbots_meta is. Defaults to ~/bitbots_meta")
+    parser.add_argument("-e", action="store_true", dest="draw_base_elements", default=False,
+                        help="Include base AbstractStackElement classes in map")
+    parser.add_argument("-a", action="store_true", dest="draw_abstract", default=False,
+                        help="Include abstract StackElements in map")
+    parser.add_argument("-i", action="store_true", dest="draw_inheritance", default=False,
+                        help="Draw inheritance between StackElements")
+    parser.add_argument("--no-pushes", action="store_false", dest="no_pushes", default=False,
+                        help="Don't draw pushes between StackElements")
+    args = parser.parse_args()
+
+    out = str(args.out)
+    if os.path.isdir(out):
+        out = os.path.join(out, "%s_map.%s" % (args.target, args.format))
+    elif not out.endswith(".%s" % args.format):
+        out += ".%s" % args.format
+
+    
+    target = args.target
+    path = args.path
+    if not target and not path:
+        print("You have to either define --target or --path. Get help with -h")
+        exit(0)
+    if target:
+        target_path = os.path.join(os.path.expanduser(args.bitbots_meta), stackmachine_map.STACKMACHINE_LOCATIONS[target])
+    elif path:
+        target_path = path
+
+    ####
+    # Actually call the analyzer with correct information
+    ####
+    map = stackmachine_map.map_stackmachine(target_path)
+    dot = map.to_dotgraph(args.draw_inheritance, not args.no_pushes, args.draw_abstract, args.draw_base_elements, args.start)
+    dot.write(out, format=args.format)
