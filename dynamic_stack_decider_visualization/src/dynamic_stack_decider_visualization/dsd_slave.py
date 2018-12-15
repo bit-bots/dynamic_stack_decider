@@ -5,12 +5,12 @@ from typing import List, Tuple
 import rospy
 from std_msgs.msg import String
 
-from bitbots_dsd.abstract_stack_element import AbstractStackElement
-from bitbots_dsd.dsd import DSD
+from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
+from dynamic_stack_decider.dsd import DSD
 
 import pydot
 
-from bitbots_dsd.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement
+from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement
 
 
 class ParseException(Exception):

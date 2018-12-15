@@ -34,7 +34,7 @@ import uuid
 import pydot
 import rospkg
 import yaml
-from bitbots_dsd_visualisation.dsd_slave import DsdSlave
+from .dsd_slave import DsdSlave
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Qt
 from python_qt_binding.QtGui import QIcon, QPainter, QStandardItemModel
@@ -48,7 +48,7 @@ from .interactive_graphics_view import InteractiveGraphicsView
 
 def parse_locations_yaml() -> list:
     rp = rospkg.RosPack()
-    path = os.path.join(rp.get_path('bitbots_dsd_visualisation'), 'config', 'locations.yaml')
+    path = os.path.join(rp.get_path('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
     with open(path, 'r') as f:
         return yaml.load(f)['locations']
 
@@ -78,7 +78,7 @@ class DsdVizPlugin(Plugin):
 
         # load qt ui definition from file
         rp = rospkg.RosPack()
-        ui_file = os.path.join(rp.get_path("bitbots_dsd_visualisation"), "resource", "StackmachineViz.ui")
+        ui_file = os.path.join(rp.get_path("dynamic_stack_decider_visualization"), "resource", "StackmachineViz.ui")
         loadUi(ui_file, self._widget, {"InteractiveGraphicsView": InteractiveGraphicsView})
 
         # initialize qt scene
