@@ -63,6 +63,23 @@ class DecisionTreeElement(AbstractTreeElement):
         return self.name
 
 
+class SequenceTreeElement(AbstractTreeElement):
+    """
+    A tree element describing a sequence of actions. Each action
+    has optional parameters that will be passwd to the module on
+    creation
+    """
+    def __init__(self, parent):
+        AbstractTreeElement.__init__(self, None, parent)
+        self.action_elements = list()
+
+    def add_action_element(self, action_element):
+        self.action_elements.append(action_element)
+
+    def __repr__(self):
+        return '({})'.format(', '.join(self.actions))
+
+
 class ActionTreeElement(AbstractTreeElement):
     """
     A tree element describing an action. An action has optional

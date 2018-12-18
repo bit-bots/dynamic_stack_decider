@@ -9,7 +9,8 @@ from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 from dynamic_stack_decider.parser import DSDParser
-from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement
+from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement, \
+    SequenceTreeElement
 
 
 def discover_elements(path):
@@ -34,7 +35,6 @@ def discover_elements(path):
                         relative_filename = os.path.join(
                             os.path.relpath(os.path.relpath(path), os.path.dirname(os.path.dirname(path))), file)
                         module_path = relative_filename.replace("/", ".").replace("\\", ".").replace(".py", "")
-                        print(module_path)
                         module = importlib.import_module(module_path)
                         elements[classname] = getattr(module, classname)
                 except Exception as e:
@@ -128,12 +128,21 @@ class DSD:
             element.module = self.decisions[element.name]
             for child in element.children.values():
                 self._bind_modules(child)
+        elif isinstance(element, SequenceTreeElement):
+            for action in element.action_elements:
+                self._bind_modules(action)
         else:
             raise KeyError('Provided element ' + str(element) + 'was not found in registered actions or decisions')
 
     def _init_element(self, element, parameters=None):
         """ Initialises the module belonging to the given element. """
-        return element.module(self.blackboard, self, parameters)
+        if isinstance(element, SequenceTreeElement):
+            initialized_actions = list()
+            for action in element.action_elements:
+                initialized_actions.append(action.module(self.blackboard, self, action.parameters))
+            return initialized_actions
+        else:
+            return element.module(self.blackboard, self, parameters)
 
     def set_start_element(self, start_element, init_data=None):
         """
@@ -186,9 +195,14 @@ class DSD:
             self.do_not_reevaluate = False
         # run the top module
         current_tree_element, current_instance = self.stack[-1]
-        result = current_instance.perform()
-        if isinstance(current_instance, AbstractDecisionElement):
-            self.push(current_tree_element.get_child(result))
+        if isinstance(current_tree_element, SequenceTreeElement):
+            # current_instance is the list of initialized actions
+            for action in current_instance:
+                action.perform()
+        else:
+            result = current_instance.perform()
+            if isinstance(current_instance, AbstractDecisionElement):
+                self.push(current_tree_element.get_child(result))
 
     def push(self, element):
         """
