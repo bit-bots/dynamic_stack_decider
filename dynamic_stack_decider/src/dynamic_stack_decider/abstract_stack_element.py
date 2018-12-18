@@ -6,7 +6,7 @@ import rospy
 class AbstractStackElement(object):
     """
     The AbstractStackElement is the basis of all elements on the stack.
-    It provides some help functions which should not be overloaded. 
+    It provides some help functions which should not be overloaded.
     The work of an element is done in the :func:`perform`.
     Each element which inheritaces the AbstractStackElement can be used as a root element on the stack.
     """
@@ -35,7 +35,7 @@ class AbstractStackElement(object):
     def pop(self):
         """
         Help method which pops the element of the stack.
-        
+
         This method should always be called with a return::
             return self.pop()
 
@@ -46,7 +46,7 @@ class AbstractStackElement(object):
 
     def perform(self, reevaluate=False):
         """
-        This method is called when the element is on top of the stack. 
+        This method is called when the element is on top of the stack.
         This method has to be overloaded by the implementation!
 
         :param reevaluate: True if the current method call is a reevaluate of the state. Meaning the modul is not on top of the stack.
