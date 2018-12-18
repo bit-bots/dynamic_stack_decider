@@ -1,0 +1,14 @@
+#SubBehavior
+$ThirdDecision
+    FIRST --> @FirstAction
+    SECOND --> @SecondAction
+
+-->TestDSD
+$FirstDecision
+    ACTION --> @FirstAction
+    DECISION --> $SecondDecision
+        FIRST --> @FirstAction
+        SECOND --> @SecondAction
+    SUBBEHAVIOR --> #SubBehavior
+    SEQUENCE --> @FirstAction, @SecondAction
+    PARAMETERS --> @FirstAction + key:value
