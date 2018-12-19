@@ -142,7 +142,8 @@ class DSDParser:
             element = DecisionTreeElement(name, parent)
         elif name.startswith('@'):
             name = name[1:]
-            name, *parameters = re.split(r'\s*\+\s*', name)
+            parameters = re.split(r'\s*\+\s*', name)
+            name = parameters.pop(0)
             parameter_dict = dict()
             for parameter in parameters:
                 parameter_key, parameter_value = parameter.split(':')
