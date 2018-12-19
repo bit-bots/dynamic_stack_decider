@@ -18,6 +18,7 @@ class ParserTest(unittest.TestCase):
     def test_possible_results(self):
         self.assertSetEqual(set(self.tree.root_element.children.keys()),
                             {'ACTION', 'DECISION', 'SUBBEHAVIOR', 'SEQUENCE', 'PARAMETERS',
+                             'LINE_COMMENT', 'BLOCK_COMMENT', 'COMPLICATED_COMMENT',
                              'MULTIPLE_PARAMETERS'})
 
     def test_following_elements(self):
@@ -63,6 +64,22 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(parameter_element.name, 'FirstAction')
         self.assertTrue(isinstance(parameter_element, ActionTreeElement))
         self.assertDictEqual(parameter_element.parameters, {'key': 'value'})
+
+    def test_line_comment(self):
+        comment_element = self.tree.root_element.get_child('LINE_COMMENT')
+        self.assertEqual(comment_element.name, 'FirstAction')
+        self.assertTrue(isinstance(comment_element, ActionTreeElement))
+
+    def test_block_comment(self):
+        comment_element = self.tree.root_element.get_child('BLOCK_COMMENT')
+        self.assertEqual(comment_element.name, 'FirstAction')
+        self.assertTrue(isinstance(comment_element, ActionTreeElement))
+        self.assertDictEqual(comment_element.parameters, {'key': 'value'})
+
+    def test_complicated_comment(self):
+        comment_element = self.tree.root_element.get_child('COMPLICATED_COMMENT')
+        self.assertEqual(comment_element.name, 'FirstAction')
+        self.assertTrue(isinstance(comment_element, ActionTreeElement))
 
     def test_multiple_parameters(self):
         parameter_element = self.tree.root_element.get_child('MULTIPLE_PARAMETERS')

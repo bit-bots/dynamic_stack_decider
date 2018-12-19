@@ -12,4 +12,13 @@ $FirstDecision
     SUBBEHAVIOR --> #SubBehavior
     SEQUENCE --> @FirstAction, @SecondAction
     PARAMETERS --> @FirstAction + key:value
+    LINE_COMMENT --> @FirstAction // Comment at end of line
+    // This tests a single line comment and should be ignored
+    //** This tests a
+    block comment and
+    should be ignored **//
+    BLOCK_COMMENT --> //** COMMENT **// @FirstAction + //** parameters: **// key:value //**
+    This tests a block comment beginning in a line with code and
+    ending in a line with
+    code (indent is correct, though**//    COMPLICATED_COMMENT --> @FirstAction
     MULTIPLE_PARAMETERS --> @FirstAction + key1:value1 + key2:value2

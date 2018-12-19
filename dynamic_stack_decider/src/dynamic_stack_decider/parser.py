@@ -19,23 +19,33 @@ class DSDParser:
         current_subtree = tree
         current_tree_element = None
         next_is_start = False
+        next_is_comment = False
         comment = False
         last_indent = 0
         lnr = 0
         with open(file, 'r') as bfile:
             for line in bfile:
                 lnr += 1
+                comment = next_is_comment
+
+                line = re.sub(r'//\*\*.*?\*\*//', '', line)  # Block comments starting and ending in the same line
+
+                if '**//' in line:
+                    # Block comments ending in this line
+                    # This line as well as the following will contain valid code
+                    next_is_comment = False
+                    comment = False
+                    line = re.sub(r'.*\*\*//', '', line)
+                if '//**' in line:
+                    # Block comments starting in this line
+                    # This line may contain valid code, the next ones won't
+                    next_is_comment = True
+                    line = re.sub(r'//\*\*.*', '', line)
+
+                line = re.sub(r'//.*', '', line)  # Line comments
+
                 line = line.rstrip()
                 if not line:
-                    continue
-                if '**//' in line:
-                    # TODO: the line with the block comment end should not be ignored
-                    comment = False
-                    continue
-                if '//**' in line:
-                    comment = True
-                    continue
-                if line.strip().startswith('//'):
                     continue
 
                 if not comment:
