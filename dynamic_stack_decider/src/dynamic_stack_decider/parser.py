@@ -132,15 +132,12 @@ class DSDParser:
             element = DecisionTreeElement(name, parent)
         elif name.startswith('@'):
             name = name[1:]
-            if re.search(r'\s*\+\s*', name):
-                # There is a parameter
-                name, parameter = re.split(r'\s*\+\s*', name, 1)
+            name, *parameters = re.split(r'\s*\+\s*', name)
+            parameter_dict = dict()
+            for parameter in parameters:
                 parameter_key, parameter_value = parameter.split(':')
-                parameter_dict = {parameter_key: parameter_value}
-                element = ActionTreeElement(name, parent, parameter_dict)
-            else:
-                # There is no parameter
-                element = ActionTreeElement(name, parent)
+                parameter_dict[parameter_key] = parameter_value
+            element = ActionTreeElement(name, parent, parameter_dict)
         else:
             raise ParseError()
         return element

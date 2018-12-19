@@ -12,3 +12,4 @@ $FirstDecision
     SUBBEHAVIOR --> #SubBehavior
     SEQUENCE --> @FirstAction, @SecondAction
     PARAMETERS --> @FirstAction + key:value
+    MULTIPLE_PARAMETERS --> @FirstAction + key1:value1 + key2:value2
