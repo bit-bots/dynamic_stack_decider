@@ -33,7 +33,7 @@
     <architecture_independent/>
     <rqt_gui plugin="${prefix}/plugin_dsd_viz.xml"/>
     <bitbots_documentation>
-      <status>unknown</status>
+      <status>tested_robot</status>
       <language>python</language>
     </bitbots_documentation>
   </export>
