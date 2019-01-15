@@ -82,7 +82,7 @@ class DsdSlave(DSD):
 
         self.__parse_remote_msg(remaining_msg.replace(match_all, ''), element)
 
-    def subscriber_callback(self, msg: String):
+    def subscriber_callback(self, msg):
         # abort if the dsd is not fully loaded yet
         if not self.initialized:
             return
@@ -123,7 +123,7 @@ class DsdSlave(DSD):
 
         return dot
 
-    def __stack_to_dotgraph(self, stack: List[Tuple[AbstractTreeElement, AbstractStackElement]], dot: pydot.Dot):
+    def __stack_to_dotgraph(self, stack, dot):
         """
         Recursively modify dot to include every element of the stack
         """
