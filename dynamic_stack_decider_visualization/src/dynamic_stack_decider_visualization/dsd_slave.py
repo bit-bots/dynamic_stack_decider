@@ -1,6 +1,5 @@
 import re
 import uuid
-from typing import List, Tuple
 
 import rospy
 from std_msgs.msg import String
