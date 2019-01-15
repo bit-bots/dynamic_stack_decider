@@ -19,7 +19,7 @@ class ParseException(Exception):
 class DsdSlave(DSD):
 
     def __init__(self, debug_topic):
-        super().__init__(None, None)
+        super(DsdSlave, self).__init__(None, None)
 
         self.debug_subscriber = rospy.Subscriber(debug_topic, String, self.subscriber_callback, queue_size=10)
         self.__cached_msg = None
