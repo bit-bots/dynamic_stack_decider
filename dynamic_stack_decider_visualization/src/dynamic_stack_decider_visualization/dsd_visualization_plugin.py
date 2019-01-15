@@ -46,7 +46,7 @@ from rqt_gui_py.plugin import Plugin
 from .interactive_graphics_view import InteractiveGraphicsView
 
 
-def parse_locations_yaml() -> list:
+def parse_locations_yaml():
     rp = rospkg.RosPack()
     path = os.path.join(rp.get_path('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
     with open(path, 'r') as f:
@@ -250,7 +250,7 @@ class DsdVizPlugin(Plugin):
                 dsd_data = i
                 break
         else:
-            raise ValueError(f'no dsd with name {name} found')
+            raise ValueError('no dsd with name {} found'.format(name))
 
         # Figure out full paths with the help of rospkg
         rospack = rospkg.RosPack()

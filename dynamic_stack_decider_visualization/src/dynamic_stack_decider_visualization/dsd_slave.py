@@ -67,7 +67,7 @@ class DsdSlave(DSD):
             raise ParseException('The remote DSD seems to have an abstract element on its stack')
 
         match_reason = re.search('\|-.*?->', match_all).group()[2:-2]
-        match_class = re.search(f'->..*?\[', match_all).group()[3:-1]
+        match_class = re.search('->..*?\[', match_all).group()[3:-1]
         match_data = re.search('\[.*\];', match_all).group()[1:-2]  # TODO Show data
 
         # Search for the correct child element
@@ -75,8 +75,8 @@ class DsdSlave(DSD):
         try:
             element = parent_element.get_child(match_reason)
         except KeyError:
-            raise ParseException(f'The matched activating_result {match_reason} could not be found in local tree'
-                                 f' (from parent {parent_element})')
+            raise ParseException('The matched activating_result {} could not be found in local tree'
+                                 ' (from parent {})'.format(match_reason, parent_element))
 
         self.push(element)
 
@@ -105,7 +105,7 @@ class DsdSlave(DSD):
         self.__cached_msg = msg
 
     @staticmethod
-    def __error_dotgraph() -> pydot.Dot:
+    def __error_dotgraph():
         dot = pydot.Dot(graph_type='digraph')
 
         param_debug_active = rospy.get_param("/debug_active", False)
@@ -117,13 +117,13 @@ class DsdSlave(DSD):
         dot.add_node(pydot.Node(uid2, label="Please make sure that\n"
                                             "- The appropriate dsd is started\n"
                                             "- You are connected to the same roscore\n"
-                                            f"- param /debug_active is True (for me it is {param_debug_active})"))
+                                            "- param /debug_active is True (for me it is {})".format(param_debug_active)))
 
         dot.add_edge(pydot.Edge(uid1, uid2))
 
         return dot
 
-    def __stack_to_dotgraph(self, stack: List[Tuple[AbstractTreeElement, AbstractStackElement]], dot: pydot.Dot) -> Tuple[pydot.Dot, str]:
+    def __stack_to_dotgraph(self, stack: List[Tuple[AbstractTreeElement, AbstractStackElement]], dot: pydot.Dot):
         """
         Recursively modify dot to include every element of the stack
         """
@@ -168,7 +168,7 @@ class DsdSlave(DSD):
 
         return dot, uid
 
-    def to_dotgraph(self) -> pydot.Dot:
+    def to_dotgraph(self):
         """
         Represent the current stack as dotgraph
         """
