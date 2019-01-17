@@ -1,5 +1,6 @@
 import os
 import unittest
+import xmlrunner
 
 from dynamic_stack_decider.parser import DSDParser
 from dynamic_stack_decider.tree import DecisionTreeElement, ActionTreeElement, SequenceTreeElement
@@ -88,5 +89,9 @@ class ParserTest(unittest.TestCase):
         self.assertDictEqual(parameter_element.parameters,
                              {'key1': 'value1', 'key2': 'value2'})
 
+
 if __name__ == '__main__':
-    unittest.main()
+    with open('report.xml', 'wb') as output:
+        unittest.main(
+            testRunner=xmlrunner.XMLTestRunner(output=output)
+        )
