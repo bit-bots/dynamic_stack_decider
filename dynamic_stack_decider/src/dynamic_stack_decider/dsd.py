@@ -28,7 +28,7 @@ def discover_elements(path):
         with open(os.path.join(path, file), "r") as dp:
             for line in dp:
                 try:
-                    m = re.search(r"(?<=class\s)[a-zA-Z0-9]*", line)
+                    m = re.search(r"(?<=^class\s)[a-zA-Z0-9]*", line)
                     if m:
                         classname = m.group()
                         # relative_filename is the name relative to the src directory (from where it will be imported)
