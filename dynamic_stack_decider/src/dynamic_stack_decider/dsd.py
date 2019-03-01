@@ -32,8 +32,8 @@ def discover_elements(path):
                     if m:
                         classname = m.group()
                         # relative_filename is the name relative to the src directory (from where it will be imported)
-                        relative_filename = os.path.join(
-                            os.path.relpath(os.path.relpath(path), os.path.dirname(os.path.dirname(path))), file)
+                        # split path at "src" and take the last part
+                        relative_filename = os.path.join(path.split("/src/")[-1], file)                        
                         module_path = relative_filename.replace("/", ".").replace("\\", ".").replace(".py", "")
                         module = importlib.import_module(module_path)
                         elements[classname] = getattr(module, classname)
