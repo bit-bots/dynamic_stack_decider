@@ -20,7 +20,7 @@ class ParserTest(unittest.TestCase):
         self.assertSetEqual(set(self.tree.root_element.children.keys()),
                             {'ACTION', 'DECISION', 'SUBBEHAVIOR', 'SEQUENCE', 'PARAMETERS',
                              'LINE_COMMENT', 'BLOCK_COMMENT', 'COMPLICATED_COMMENT',
-                             'MULTIPLE_PARAMETERS'})
+                             'MULTIPLE_PARAMETERS', 'SECOND_SUBBEHAVIOR_1', 'SECOND_SUBBEHAVIOR_2'})
 
     def test_following_elements(self):
         first_child = self.tree.root_element.get_child('ACTION')
@@ -88,6 +88,13 @@ class ParserTest(unittest.TestCase):
         self.assertTrue(isinstance(parameter_element, ActionTreeElement))
         self.assertDictEqual(parameter_element.parameters,
                              {'key1': 'value1', 'key2': 'value2'})
+
+    def test_multiple_subbehavior_references(self):
+        sub_behavior_1_root_decision = self.tree.root_element.get_child('SECOND_SUBBEHAVIOR_1')
+        sub_behavior_2_root_decision = self.tree.root_element.get_child('SECOND_SUBBEHAVIOR_2')
+        self.assertEqual(sub_behavior_1_root_decision.name, sub_behavior_2_root_decision.name)
+        self.assertEqual(sub_behavior_1_root_decision.activation_reason, 'SECOND_SUBBEHAVIOR_1')
+        self.assertEqual(sub_behavior_2_root_decision.activation_reason, 'SECOND_SUBBEHAVIOR_2')
 
 
 if __name__ == '__main__':
