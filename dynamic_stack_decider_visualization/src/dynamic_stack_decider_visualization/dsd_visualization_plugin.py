@@ -27,6 +27,7 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+from __future__ import print_function
 
 import os
 import uuid
@@ -170,7 +171,7 @@ class DsdVizPlugin(Plugin):
 
         else:
             self._render_dotgraph(self.dsd.to_dotgraph())
-            # self._render_debug_data(self.stackmachine_state.to_QItemModel(self._scene))
+            # self._render_debug_data(self.stackmachine_state.to_QItemModel(self._scene)) # TODO Render debug data
 
     def _render_messages(self, *messages):
         """Render simple messages on the canvas"""
