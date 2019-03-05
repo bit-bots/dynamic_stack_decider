@@ -9,7 +9,7 @@ from dynamic_stack_decider.dsd import DSD
 
 import pydot
 
-from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement
+from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement, SequenceTreeElement
 
 
 class ParseException(Exception):
@@ -129,7 +129,10 @@ class DsdSlave(DSD):
         element, _ = stack[0]
 
         # Determine correct shape
-        if isinstance(element, DecisionTreeElement):
+        if isinstance(element, SequenceTreeElement):
+            shape = 'ellipse'
+            element.name = 'Sequence: ' + ', '.join([e.name for e in element.action_elements])
+        elif isinstance(element, DecisionTreeElement):
             shape = 'box'
         else:
             shape = 'ellipse'
@@ -148,10 +151,13 @@ class DsdSlave(DSD):
                 if len(stack) > 1 and activating_result == stack[1][0].activation_reason:
                     dot, child_uid = self.__stack_to_dotgraph(stack[1:], dot)
 
-                # Draw this child simple because we want to show direct children of elements
+                # Draw this child as shape because we want to show direct children of elements
                 else:
                     # Determine shape of child
-                    if isinstance(child, DecisionTreeElement):
+                    if isinstance(child, SequenceTreeElement):
+                        child_shape = 'ellipse'
+                        child.name = 'Sequence: ' + ', '.join([e.name for e in child.action_elements])
+                    elif isinstance(child, DecisionTreeElement):
                         child_shape = 'box'
                     else:
                         child_shape = 'ellipse'
