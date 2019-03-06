@@ -60,14 +60,13 @@ class AbstractStackElement(object):
         """
         self.dsd.interrupt()
 
-    def publish_debug_data(self, label, data):
+    def publish_debug_data(self, data, label=None):
         """
         Publish debug data. Can be viewed using the stackmachine-visualization
 
         :type label: str or None
         :type data: dict or list or int or float or str or bool
         """
-
         if type(data) not in (dict, list, int, float, str, bool):
             rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON serializable and will not be published".format(type(data)))
             return
@@ -75,8 +74,9 @@ class AbstractStackElement(object):
         if label is None:
             label = len(self._debug_data)
 
-        rospy.logdebug('{}    :   {}'.format(label, data))
+        rospy.logdebug('{}: {}'.format(label, data))
         self._debug_data[label] = data
+        print("a" + str(self._debug_data))
 
     def __repr__(self):
         """
@@ -87,8 +87,6 @@ class AbstractStackElement(object):
         shortname = self.__class__.__name__
 
         data = json.dumps(self._debug_data)
-        self._debug_data = {}
-
         return ":abstract:{}[{}]".format(shortname, data)
 
     @staticmethod
