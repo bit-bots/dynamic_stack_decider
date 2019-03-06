@@ -62,14 +62,17 @@ class AbstractStackElement(object):
 
     def publish_debug_data(self, label, data):
         """
-        Publish debug data. Can be viewed using the stackmachine-visualization
+        Publish debug data. Can be viewed using the dsd-visualization
+
+        This method is safe to call without wrapping it in a try-catch block although invalid values will
+        be wrapped in a `str()` call
 
         :type label: str
         :type data: dict or list or int or float or str or bool
         """
         if type(data) not in (dict, list, int, float, str, bool):
-            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON serializable and will not be published".format(type(data)))
-            return
+            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON serializable and will be wrapped in str()".format(type(data)))
+            data = str(data)
 
         rospy.logdebug('{}: {}'.format(label, data))
         self._debug_data[label] = data
