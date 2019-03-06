@@ -171,7 +171,7 @@ class DsdVizPlugin(Plugin):
 
         else:
             self._render_dotgraph(self.dsd.to_dotgraph())
-            # self._render_debug_data(self.stackmachine_state.to_QItemModel(self._scene)) # TODO Render debug data
+            self._render_debug_data(self.dsd.to_QItemModel())
 
     def _render_messages(self, *messages):
         """Render simple messages on the canvas"""
@@ -221,14 +221,13 @@ class DsdVizPlugin(Plugin):
     def _render_debug_data(self, qitem_model):
         """Render debug data in the tree view on the right side of the scene"""
 
-        # Only redraw when the itemmodel differs from the previous one
+        # Only redraw when the item-model differs from the previous one
         if self._prev_QItemModel == qitem_model:
             return
         else:
             self._prev_QItemModel = qitem_model
-
-        self._widget.stack_prop_tree_view.setModel(qitem_model)
-        self._widget.stack_prop_tree_view.expandAll()
+            self._widget.stack_prop_tree_view.setModel(qitem_model)
+            self._widget.stack_prop_tree_view.expandAll()
 
     def set_dsd(self, name):
         """
@@ -236,7 +235,6 @@ class DsdVizPlugin(Plugin):
 
         :param name: display_name of any dsd in the locations.yaml
         """
-
         # close debug connection of old dsd
         if self.dsd is not None:
             self.dsd.close()
