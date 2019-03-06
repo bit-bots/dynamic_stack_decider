@@ -75,6 +75,14 @@ class AbstractStackElement(object):
         self._debug_data[label] = data
         print("a" + str(self._debug_data))
 
+    def clear_debug_data(self):
+        """
+        Clear existing debug data
+
+        This is needed when old values are no longer supposed to be visible
+        """
+        self._debug_data = {}
+
     def __repr__(self):
         """
         We shorten the representation. It is shorter but has enough information.
