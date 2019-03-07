@@ -192,12 +192,14 @@ class DsdSlave(DSD):
             for i, data in enumerate(debug_data):
                 child_item = QStandardItem()
                 child_item.setText(str(i) + ": ")
+                child_item.setEditable(False)
                 self.__append_element_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif type(debug_data) is dict:
             for label, data in debug_data.items():
                 child_item = QStandardItem()
                 child_item.setText(str(label) + ": ")
+                child_item.setEditable(False)
                 self.__append_element_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif type(debug_data) is str or type(debug_data) is int \
@@ -240,12 +242,15 @@ class DsdSlave(DSD):
         for elem, _ in self.stack:
             elem_item = QStandardItem()
             elem_item.setText(str(elem))
+            elem_item.setEditable(False)
             self.__append_element_to_item(elem_item, elem.debug_data)
             model.invisibleRootItem().appendRow(elem_item)
 
             # Add a spacer if this is not the last item
             if elem != self.stack[-1][0]:
-                model.invisibleRootItem().appendRow(QStandardItem())
+                spacer = QStandardItem()
+                spacer.setEditable(False)
+                model.invisibleRootItem().appendRow(spacer)
 
         self.__cached_item_model = model
         return self.__cached_item_model
