@@ -92,6 +92,7 @@ class DsdSlave(DSD):
         if msg == self.__cached_msg:
             return
         self.__cached_dotgraph = None
+        self.__cached_item_model = None
 
         # extract the root stack element
         match_root_all = re.search('^\|-None->.*?;', msg).group()
@@ -102,7 +103,7 @@ class DsdSlave(DSD):
         # parse the remaining stack (without root element)
         self.__parse_remote_msg(msg.replace(match_root_all, ''), self.start_element)
 
-        # cache the message so we dont have to reprocess it
+        # save the message so we know not to reprocess it again
         self.__cached_msg = msg
 
     @staticmethod
@@ -187,7 +188,6 @@ class DsdSlave(DSD):
         :type debug_data: dict or list or int or float or str or bool
         :rtype: python_qt_binding.QtGui.QStandardItem
         """
-        print(type(debug_data))
         if type(debug_data) is list:
             for i, data in enumerate(debug_data):
                 child_item = QStandardItem()
