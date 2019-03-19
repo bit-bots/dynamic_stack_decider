@@ -1,3 +1,4 @@
+import copy
 import re
 from dynamic_stack_decider.tree import Tree, AbstractTreeElement, DecisionTreeElement, ActionTreeElement, \
     SequenceTreeElement
@@ -97,7 +98,7 @@ class DSDParser:
                                 current_subtree.set_root_element(subtrees[subtree_name].root_element)
                             else:
                                 # Append this subtree in the current position
-                                current_tree_element.add_child_element(subtrees[subtree_name].root_element, result)
+                                current_tree_element.add_child_element(copy.copy(subtrees[subtree_name].root_element), result)
 
                         elif re.search(r'\s*,\s*', call):
                             # A sequence element

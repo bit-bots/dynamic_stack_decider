@@ -12,3 +12,9 @@ locations:
     relative_action_path: src/bitbots_head_behavior/actions
     relative_decision_path: src/bitbots_head_behavior/decisions
     relative_dsd_path: src/bitbots_head_behavior/head_behavior.dsd
+  - display_name: HCM
+    package: bitbots_hcm
+    debug_topic: /debug/dsd/hcm
+    relative_action_path: src/bitbots_hcm/hcm_dsd/actions
+    relative_decision_path: src/bitbots_hcm/hcm_dsd/decisions
+    relative_dsd_path: src/bitbots_hcm/hcm_dsd/hcm.dsd

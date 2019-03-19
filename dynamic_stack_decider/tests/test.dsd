@@ -3,6 +3,11 @@ $ThirdDecision
     FIRST --> @FirstAction
     SECOND --> @SecondAction
 
+#SecondSubBehavior
+$ThirdDecision
+    FIRST --> @FirstAction
+    SECOND --> @SecondAction
+
 -->TestDSD
 $FirstDecision
     ACTION --> @FirstAction
@@ -22,3 +27,5 @@ $FirstDecision
     ending in a line with
     code (indent is correct, though**//    COMPLICATED_COMMENT --> @FirstAction
     MULTIPLE_PARAMETERS --> @FirstAction + key1:value1 + key2:value2
+    SECOND_SUBBEHAVIOR_1 --> #SecondSubBehavior
+    SECOND_SUBBEHAVIOR_2 --> #SecondSubBehavior

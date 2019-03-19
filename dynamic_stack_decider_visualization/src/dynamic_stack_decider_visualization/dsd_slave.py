@@ -1,14 +1,12 @@
+import json
 import re
 import uuid
-
+import pydot
 import rospy
 from std_msgs.msg import String
-
+from python_qt_binding.QtGui import QStandardItemModel, QStandardItem
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 from dynamic_stack_decider.dsd import DSD
-
-import pydot
-
 from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement, SequenceTreeElement
 
 
@@ -24,6 +22,7 @@ class DsdSlave(DSD):
         self.debug_subscriber = rospy.Subscriber(debug_topic, String, self.subscriber_callback, queue_size=10)
         self.__cached_msg = None
         self.__cached_dotgraph = None
+        self.__cached_item_model = None
         self.initialized = False
 
     def _init_element(self, element, parameters=None):
@@ -67,12 +66,13 @@ class DsdSlave(DSD):
 
         match_reason = re.search('\|-.*?->', match_all).group()[2:-2]
         match_class = re.search('->..*?\[', match_all).group()[3:-1]
-        match_data = re.search('\[.*\];', match_all).group()[1:-2]  # TODO Show data
+        match_data = re.search('\[.*\];', match_all).group()[1:-2]
 
-        # Search for the correct child element
+        # Search for the correct child element and set it's data
         #   Since the remote DSD should have the same tree it HAS to be directly under the parent_element node
         try:
             element = parent_element.get_child(match_reason)
+            element.debug_data = json.loads(match_data)
         except KeyError:
             raise ParseException('The matched activating_result {} could not be found in local tree'
                                  ' (from parent {})'.format(match_reason, parent_element))
@@ -92,15 +92,18 @@ class DsdSlave(DSD):
         if msg == self.__cached_msg:
             return
         self.__cached_dotgraph = None
+        self.__cached_item_model = None
 
         # extract the root stack element
         match_root_all = re.search('^\|-None->.*?;', msg).group()
-        self.set_start_element(self.tree.root_element)  # TODO actually choose the correct start element
+        match_root_data = re.search('\[.*\];', match_root_all).group()[1:-2]
+        self.set_start_element(self.tree.root_element)
+        self.tree.root_element.debug_data = json.loads(match_root_data)
 
         # parse the remaining stack (without root element)
         self.__parse_remote_msg(msg.replace(match_root_all, ''), self.start_element)
 
-        # cache the message so we dont have to reprocess it
+        # save the message so we know not to reprocess it again
         self.__cached_msg = msg
 
     @staticmethod
@@ -121,6 +124,10 @@ class DsdSlave(DSD):
         dot.add_edge(pydot.Edge(uid1, uid2))
 
         return dot
+
+    @staticmethod
+    def __empty_item_model():
+        return QStandardItemModel()
 
     def __stack_to_dotgraph(self, stack, dot):
         """
@@ -173,6 +180,33 @@ class DsdSlave(DSD):
 
         return dot, uid
 
+    def __append_element_to_item(self, parent_item, debug_data):
+        """
+        Append an elements debug_data to a QStandardItem.
+
+        :type parent_item: python_qt_binding.QtGui.QStandardItem
+        :type debug_data: dict or list or int or float or str or bool
+        :rtype: python_qt_binding.QtGui.QStandardItem
+        """
+        if type(debug_data) is list:
+            for i, data in enumerate(debug_data):
+                child_item = QStandardItem()
+                child_item.setText(str(i) + ": ")
+                child_item.setEditable(False)
+                self.__append_element_to_item(child_item, data)
+                parent_item.appendRow(child_item)
+        elif type(debug_data) is dict:
+            for label, data in debug_data.items():
+                child_item = QStandardItem()
+                child_item.setText(str(label) + ": ")
+                child_item.setEditable(False)
+                self.__append_element_to_item(child_item, data)
+                parent_item.appendRow(child_item)
+        elif type(debug_data) is str or type(debug_data) is int \
+                or type(debug_data) is float or type(debug_data) is bool\
+                or type(debug_data) is unicode:
+            parent_item.setText(parent_item.text() + str(debug_data))
+
     def to_dotgraph(self):
         """
         Represent the current stack as dotgraph
@@ -190,3 +224,33 @@ class DsdSlave(DSD):
 
         self.__cached_dotgraph = dot
         return dot
+
+    def to_QItemModel(self):
+        """
+        Represent the DSDs debug data as QITemModel
+        """
+        # Return cached result if available
+        if self.__cached_item_model is not None:
+            return self.__cached_item_model
+
+        # Return empty model when no dsd data was received yet
+        if self.__cached_msg is None:
+            return self.__empty_item_model()
+
+        # Construct a new item-model
+        model = QStandardItemModel()
+        for elem, _ in self.stack:
+            elem_item = QStandardItem()
+            elem_item.setText(str(elem))
+            elem_item.setEditable(False)
+            self.__append_element_to_item(elem_item, elem.debug_data)
+            model.invisibleRootItem().appendRow(elem_item)
+
+            # Add a spacer if this is not the last item
+            if elem != self.stack[-1][0]:
+                spacer = QStandardItem()
+                spacer.setEditable(False)
+                model.invisibleRootItem().appendRow(spacer)
+
+        self.__cached_item_model = model
+        return self.__cached_item_model

@@ -77,7 +77,7 @@ class SequenceTreeElement(AbstractTreeElement):
         self.action_elements.append(action_element)
 
     def __repr__(self):
-        return '({})'.format(', '.join(self.actions))
+        return '({})'.format(', '.join(repr(action) for action in self.action_elements))
 
 
 class ActionTreeElement(AbstractTreeElement):

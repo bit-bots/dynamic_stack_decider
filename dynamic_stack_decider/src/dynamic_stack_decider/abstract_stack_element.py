@@ -62,21 +62,29 @@ class AbstractStackElement(object):
 
     def publish_debug_data(self, label, data):
         """
-        Publish debug data. Can be viewed using the stackmachine-visualization
+        Publish debug data. Can be viewed using the dsd-visualization
 
-        :type label: str or None
+        This method is safe to call without wrapping it in a try-catch block although invalid values will
+        be wrapped in a `str()` call
+
+        :type label: str
         :type data: dict or list or int or float or str or bool
         """
-
         if type(data) not in (dict, list, int, float, str, bool):
-            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON serializable and will not be published".format(type(data)))
-            return
+            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON serializable and will be wrapped in str()".format(type(data)))
+            data = str(data)
 
-        if label is None:
-            label = len(self._debug_data)
-
-        rospy.logdebug('{}    :   {}'.format(label, data))
+        rospy.logdebug('{}: {}'.format(label, data))
         self._debug_data[label] = data
+        print("a" + str(self._debug_data))
+
+    def clear_debug_data(self):
+        """
+        Clear existing debug data
+
+        This is needed when old values are no longer supposed to be visible
+        """
+        self._debug_data = {}
 
     def __repr__(self):
         """
@@ -87,8 +95,6 @@ class AbstractStackElement(object):
         shortname = self.__class__.__name__
 
         data = json.dumps(self._debug_data)
-        self._debug_data = {}
-
         return ":abstract:{}[{}]".format(shortname, data)
 
     @staticmethod
