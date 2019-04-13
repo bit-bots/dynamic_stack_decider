@@ -76,7 +76,6 @@ class AbstractStackElement(object):
 
         rospy.logdebug('{}: {}'.format(label, data))
         self._debug_data[label] = data
-        print("a" + str(self._debug_data))
 
     def clear_debug_data(self):
         """
