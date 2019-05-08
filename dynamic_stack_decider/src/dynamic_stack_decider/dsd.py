@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import re
 
@@ -263,10 +264,24 @@ class DSD:
         """
 
         if self.debug_active:
-            # Construct representing stack-string
-            msg_data = ''
-            for tree_elem, elem_instance in self.stack:
-                msg_data += '|-{}->{};'.format(tree_elem.activation_reason, repr(elem_instance))
+            # Construct JSON encodable object which represents the current stack
+            data = None
+            for tree_elem, elem_instance in reversed(self.stack):
+                if type(elem_instance) is list:
+                    # sequence elements are stored as lists so we encode them in a special way
+                    elem_data = {
+                        'type': 'sequence',
+                        'content': [s.repr_dict() for s in elem_instance],
+                        'activation_reason': tree_elem.activation_reason,
+                        'next': data
+                    }
+                    data = elem_data
 
-            msg = String(data=msg_data)
+                else:
+                    elem_data = elem_instance.repr_dict()
+                    elem_data['activation_reason'] = tree_elem.activation_reason
+                    elem_data['next'] = data
+                    data = elem_data
+
+            msg = String(data=json.dumps(data))
             self.debug_publisher.publish(msg)
