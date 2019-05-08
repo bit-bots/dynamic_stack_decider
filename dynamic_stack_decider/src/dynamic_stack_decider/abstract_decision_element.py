@@ -1,5 +1,3 @@
-import json
-
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 
@@ -20,14 +18,17 @@ class AbstractDecisionElement(AbstractStackElement):
 
     _reevaluate = False
 
-    def __repr__(self):
+    def repr_dict(self):
         """
-        Overlaod from the AbstractStackElement to have "Decision" at the start.
-        """
-        shortname = self.__class__.__name__
+        Represent this stack element as dictionary which is JSON encodable
 
-        data = json.dumps(self._debug_data)
-        return "${}[{}]".format(shortname, data)
+        :rtype: dict
+        """
+        return {
+            'type': 'decision',
+            'classname': self.__class__.__name__,
+            'debug_data': self._debug_data
+        }
 
     def get_reevaluate(self):
         """

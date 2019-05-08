@@ -1,5 +1,3 @@
-import json
-
 import rospy
 
 
@@ -85,16 +83,17 @@ class AbstractStackElement(object):
         """
         self._debug_data = {}
 
-    def __repr__(self):
+    def repr_dict(self):
         """
-        We shorten the representation. It is shorter but has enough information.
+        Represent this stack element as dictionary which is JSON encodable
 
-        Furthermore, we append the current data of self.repr_data as a JSON.
+        :rtype: dict
         """
-        shortname = self.__class__.__name__
-
-        data = json.dumps(self._debug_data)
-        return ":abstract:{}[{}]".format(shortname, data)
+        return {
+            'type': 'abstract',
+            'classname': self.__class__.__name__,
+            'debug_data': self._debug_data
+        }
 
     @staticmethod
     def sign(x):

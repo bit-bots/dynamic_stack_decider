@@ -1,5 +1,3 @@
-import json
-
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 
@@ -21,11 +19,14 @@ class AbstractActionElement(AbstractStackElement):
         """
         self.dsd.set_do_not_reevaluate()
 
-    def __repr__(self):
+    def repr_dict(self):
         """
-        Overload from the AbstractStackElement to have "Action" at the start.
-        """
-        shortname = self.__class__.__name__
+        Represent this stack element as dictionary which is JSON encodable
 
-        data = json.dumps(self._debug_data)
-        return "@{}[{}]".format(shortname, data)
+        :rtype: dict
+        """
+        return {
+            'type': 'action',
+            'classname': self.__class__.__name__,
+            'debug_data': self._debug_data
+        }
