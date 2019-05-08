@@ -40,46 +40,44 @@ class DsdSlave(DSD):
     def close(self):
         self.debug_subscriber.unregister()
 
-    def __parse_remote_msg(self, remaining_msg, parent_element):
+    def __parse_remote_data(self, remaining_data, parent_element=None):
         """
         Recursively parse the remaining part of a remote DSDs state description message
         :arg parent_element: The Tree element which is the parent of the newly parsed element
         :type parent_element: AbstractTreeElement
-        :type remaining_msg: str
+        :type remaining_data: dict
         """
-        # match the complete expression of one element on the stack
-        match_all = re.search('\|-.*?;', remaining_msg)
-        if match_all is None:  # end of recursion
+        if remaining_data is None:
+            # recursion exit
             return
-        match_all = match_all.group()
 
-        # test edge case
+        if remaining_data['type'] == 'abstract':
+            raise ParseException('Remote DSD sent an abstract element in its stack')
+
         if isinstance(parent_element, ActionTreeElement):
             raise ParseException('The remote DSD sent further elements which seem to be on the stack'
                                  'but the local DSD tree has already reached an ActionElement')
 
-        match_type = re.search('\$|@|:abstract:', match_all).group()
+        if parent_element is None:
+            # If no parent_element was given, then we are processing the root element
+            self.set_start_element(self.tree.root_element)
+            self.tree.root_element.debug_data = remaining_data['debug_data']
 
-        # test edge case
-        if match_type == ':abstract:':
-            raise ParseException('The remote DSD seems to have an abstract element on its stack')
+            self.__parse_remote_data(remaining_data['next'], self.tree.root_element)
 
-        match_reason = re.search('\|-.*?->', match_all).group()[2:-2]
-        match_class = re.search('->..*?\[', match_all).group()[3:-1]
-        match_data = re.search('\[.*\];', match_all).group()[1:-2]
+        else:
+            if remaining_data['type'] in ('action', 'decision'):
+                element = parent_element.get_child(remaining_data['activation_reason'])
+                element.debug_data = remaining_data['debug_data']
+                self.push(element)
+            else:
+                # this is actually a tuple of multiple ActionTreeElements since we are looking at a sequence
+                element = parent_element.get_child(remaining_data['activation_reason'])
+                for sequence_content in remaining_data['content']:
+                    element.debug_data = sequence_content['debug_data']
+                self.push(element)
 
-        # Search for the correct child element and set it's data
-        #   Since the remote DSD should have the same tree it HAS to be directly under the parent_element node
-        try:
-            element = parent_element.get_child(match_reason)
-            element.debug_data = json.loads(match_data)
-        except KeyError:
-            raise ParseException('The matched activating_result {} could not be found in local tree'
-                                 ' (from parent {})'.format(match_reason, parent_element))
-
-        self.push(element)
-
-        self.__parse_remote_msg(remaining_msg.replace(match_all, ''), element)
+            self.__parse_remote_data(remaining_data['next'], element)
 
     def subscriber_callback(self, msg):
         # abort if the dsd is not fully loaded yet
@@ -94,14 +92,8 @@ class DsdSlave(DSD):
         self.__cached_dotgraph = None
         self.__cached_item_model = None
 
-        # extract the root stack element
-        match_root_all = re.search('^\|-None->.*?;', msg).group()
-        match_root_data = re.search('\[.*\];', match_root_all).group()[1:-2]
-        self.set_start_element(self.tree.root_element)
-        self.tree.root_element.debug_data = json.loads(match_root_data)
-
         # parse the remaining stack (without root element)
-        self.__parse_remote_msg(msg.replace(match_root_all, ''), self.start_element)
+        self.__parse_remote_data(json.loads(msg))
 
         # save the message so we know not to reprocess it again
         self.__cached_msg = msg
