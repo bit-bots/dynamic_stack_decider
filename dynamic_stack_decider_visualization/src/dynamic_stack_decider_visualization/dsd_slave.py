@@ -233,9 +233,15 @@ class DsdSlave(DSD):
         model = QStandardItemModel()
         for elem, _ in self.stack:
             elem_item = QStandardItem()
-            elem_item.setText(str(elem))
             elem_item.setEditable(False)
+
+            if isinstance(elem, SequenceTreeElement):
+                elem_item.setText('Sequence: ' + ', '.join([e.name for e in elem.action_elements]))
+            else:
+                elem_item.setText(str(elem))
+
             self.__append_element_to_item(elem_item, elem.debug_data)
+
             model.invisibleRootItem().appendRow(elem_item)
 
             # Add a spacer if this is not the last item
