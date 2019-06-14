@@ -1,3 +1,5 @@
+from typing import List
+
 class Tree:
     """ A tree defining a behaviour, parsed from a .dsd file """
     def __init__(self):
@@ -26,6 +28,9 @@ class AbstractTreeElement:
     def get_child(self, activating_result):
         return None
 
+    def set_activation_reason(self, reason):
+        self.activation_reason = reason
+
 
 class DecisionTreeElement(AbstractTreeElement):
     """
@@ -47,7 +52,7 @@ class DecisionTreeElement(AbstractTreeElement):
     def add_child_element(self, element, activating_result):
         """Add a child that will be executed when activating_result is returned"""
         self.children[activating_result] = element
-        element.activation_reason = activating_result
+        element.set_activation_reason(activating_result)
 
     def get_child(self, activating_result):
         """Get the child for a given result"""
@@ -71,10 +76,16 @@ class SequenceTreeElement(AbstractTreeElement):
     """
     def __init__(self, parent):
         AbstractTreeElement.__init__(self, None, parent)
-        self.action_elements = list()
+        self.action_elements = list()  # type: List[ActionTreeElement]
 
     def add_action_element(self, action_element):
+        action_element.activation_reason = self.activation_reason
         self.action_elements.append(action_element)
+
+    def set_activation_reason(self, reason):
+        self.activation_reason = reason
+        for action in self.action_elements:
+            action.set_activation_reason(reason)
 
     def __repr__(self):
         return '({})'.format(', '.join(repr(action) for action in self.action_elements))

@@ -184,7 +184,11 @@ class DSD:
                 # check all elements except the top one, but not the actions
                 if isinstance(instance, AbstractDecisionElement) and instance.get_reevaluate():
                     result = instance.perform(True)
-                    self.push(tree_element.get_child(result))
+                    # Push element if necessary
+                    if result != self.stack[self.stack_exec_index + 1][0].activation_reason:
+                        self.stack = self.stack[0:self.stack_exec_index + 1]
+                        self.stack_reevaluate = False
+                        self.push(tree_element.get_child(result))
 
                     if not self.stack_reevaluate:
                         # We had some external interrupt, we stop here
@@ -196,40 +200,25 @@ class DSD:
             self.do_not_reevaluate = False
         # run the top module
         current_tree_element, current_instance = self.stack[-1]
-        if isinstance(current_tree_element, SequenceTreeElement):
-            # current_instance is the list of initialized actions
-            for action in current_instance:
-                action.perform()
-        else:
-            result = current_instance.perform()
-            if isinstance(current_instance, AbstractDecisionElement):
-                self.push(current_tree_element.get_child(result))
+        result = current_instance.perform()
+        if isinstance(current_instance, AbstractDecisionElement):
+            self.push(current_tree_element.get_child(result))
 
     def push(self, element):
         """
         Put a new element on the stack and start it directly.
 
-        .. warning::
-            After using push, you should not have further code, since this
-            leads to difficult to debug behavior. Try to use::
-
-                return self.push(xxxElement, data)
+        This should only be called by the DSD, not from any of the modules
 
         :param element: The tree element that should be put on top of the stack.
         :type element: AbstractTreeElement
         """
-        if self.stack_reevaluate:
-            # we are currently checking preconditions
-            # check if we made the same decision (push) as last time
-            if self.stack[self.stack_exec_index + 1][0] == element:
-                # decision was the same, reevaluation passed, precondition did not change
-                return
-            else:
-                # result changed. we clear all stack above us and push the new element on top
-                self.stack = self.stack[0:self.stack_exec_index + 1]
-                # reevaluate is finished
-                self.stack_reevaluate = False
-        self.stack.append((element, self._init_element(element, element.parameters)))
+        if isinstance(element, SequenceTreeElement):
+            for action in element.action_elements[::-1]:
+                self.stack.append((action, self._init_element(action, action.parameters)))
+        else:
+            self.stack.append((element, self._init_element(element, element.parameters)))
+
         # we call the new element without another reevaluate
         self.update(False)
 
