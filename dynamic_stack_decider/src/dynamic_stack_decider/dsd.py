@@ -215,6 +215,7 @@ class DSD:
         """
         if isinstance(element, SequenceTreeElement):
             for action in element.action_elements[::-1]:
+                action.in_sequence = True
                 self.stack.append((action, self._init_element(action, action.parameters)))
         else:
             self.stack.append((element, self._init_element(element, element.parameters)))
@@ -256,11 +257,12 @@ class DSD:
             # Construct JSON encodable object which represents the current stack
             data = None
             for tree_elem, elem_instance in reversed(self.stack):
-                if type(elem_instance) is list:
+                if isinstance(tree_elem.parent, SequenceTreeElement):
                     # sequence elements are stored as lists so we encode them in a special way
                     elem_data = {
                         'type': 'sequence',
-                        'content': [s.repr_dict() for s in elem_instance],
+                        'current': self.stack[-1][0].name,
+                        'content': elem_instance.repr_dict(),
                         'activation_reason': tree_elem.activation_reason,
                         'next': data
                     }

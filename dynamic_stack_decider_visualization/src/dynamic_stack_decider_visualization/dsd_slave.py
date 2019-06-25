@@ -71,11 +71,12 @@ class DsdSlave(DSD):
                 element.debug_data = remaining_data['debug_data']
                 self.push(element)
             else:
-                # this is actually a tuple of multiple ActionTreeElements since we are looking at a sequence
+                # Sequence element
                 element = parent_element.get_child(remaining_data['activation_reason'])
-                for sequence_content in remaining_data['content']:
-                    element.debug_data = sequence_content['debug_data']
+                element.debug_data = None
+                element.current_child = remaining_data['current']
                 self.push(element)
+                return
 
             self.__parse_remote_data(remaining_data['next'], element)
 
@@ -128,9 +129,20 @@ class DsdSlave(DSD):
         element, _ = stack[0]
 
         # Determine correct shape
-        if isinstance(element, SequenceTreeElement):
+        if hasattr(element, 'in_sequence') and element.in_sequence:
+            element = element.parent.parent.get_child(element.activation_reason)
             shape = 'ellipse'
-            element.name = 'Sequence: ' + ', '.join([e.name for e in element.action_elements])
+            name = 'Sequence: '
+            for e in element.action_elements:
+                if element.current_child == e.name:
+                    name += '>'
+                    name += e.name
+                    name += '<'
+                else:
+                    name += e.name
+                name += ', '
+            name = name[:-2]
+            element.name = name
         elif isinstance(element, DecisionTreeElement):
             shape = 'box'
         else:
@@ -231,16 +243,22 @@ class DsdSlave(DSD):
 
         # Construct a new item-model
         model = QStandardItemModel()
-        for elem, _ in self.stack:
+        for i in range(len(self.stack)):
+            elem, _ = self.stack[i]
             elem_item = QStandardItem()
             elem_item.setEditable(False)
 
-            if isinstance(elem, SequenceTreeElement):
-                elem_item.setText('Sequence: ' + ', '.join([e.name for e in elem.action_elements]))
+            if hasattr(elem, 'in_sequence') and elem.in_sequence:
+                elem_item.setText('Sequence: ' + ', '.join([e.name for e, _ in self.stack[i:len(self.stack)][::-1]]))
+                sequence = True
             else:
                 elem_item.setText(str(elem))
+                sequence = False
 
-            self.__append_element_to_item(elem_item, elem.debug_data)
+            if hasattr(elem, 'debug_data'):
+                self.__append_element_to_item(elem_item, elem.debug_data)
+            else:
+                self.__append_element_to_item(elem_item, None)
 
             model.invisibleRootItem().appendRow(elem_item)
 
@@ -249,6 +267,9 @@ class DsdSlave(DSD):
                 spacer = QStandardItem()
                 spacer.setEditable(False)
                 model.invisibleRootItem().appendRow(spacer)
+
+            if sequence:
+                break
 
         self.__cached_item_model = model
         return self.__cached_item_model

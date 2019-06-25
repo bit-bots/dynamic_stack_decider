@@ -106,6 +106,7 @@ class ActionTreeElement(AbstractTreeElement):
         """
         AbstractTreeElement.__init__(self, name, parent)
         self.parameters = parameters
+        self.in_sequence = False
 
     def __repr__(self):
         return '@{} ({})'.format(self.name, self.parameters)
