@@ -238,6 +238,10 @@ class DSD:
             else:
                 self.stack.pop()
 
+        # not matter if a single Element has set do_not_reevaluate, we always want to
+        #   this is because an Element should not control DSD execution beyond its own lifetime
+        self.do_not_reevaluate = False
+
     def set_do_not_reevaluate(self):
         """No reevaluation on next iteration"""
         self.do_not_reevaluate = True
