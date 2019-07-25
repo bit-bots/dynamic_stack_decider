@@ -1,6 +1,5 @@
 import os
 import unittest
-import xmlrunner
 
 from dynamic_stack_decider.parser import DSDParser
 from dynamic_stack_decider.tree import DecisionTreeElement, ActionTreeElement, SequenceTreeElement
@@ -98,7 +97,11 @@ class ParserTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    with open('report.xml', 'wb') as output:
-        unittest.main(
-            testRunner=xmlrunner.XMLTestRunner(output=output)
-        )
+    try:
+        import xmlrunner
+        with open('report.xml', 'wb') as output:
+            unittest.main(
+                testRunner=xmlrunner.XMLTestRunner(output=output)
+            )
+    except ImportError:
+        unittest.main()
