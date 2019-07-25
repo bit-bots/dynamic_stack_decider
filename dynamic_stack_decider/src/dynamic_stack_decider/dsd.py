@@ -8,6 +8,7 @@ from std_msgs.msg import String
 
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
+from dynamic_stack_decider.sequence_element import SequenceElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 from dynamic_stack_decider.parser import DSDParser
 from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement, \
@@ -141,7 +142,7 @@ class DSD:
             initialized_actions = list()
             for action in element.action_elements:
                 initialized_actions.append(action.module(self.blackboard, self, action.parameters))
-            return initialized_actions
+            return SequenceElement(self.blackboard, self, initialized_actions)
         else:
             return element.module(self.blackboard, self, parameters)
 
@@ -213,12 +214,7 @@ class DSD:
         :param element: The tree element that should be put on top of the stack.
         :type element: AbstractTreeElement
         """
-        if isinstance(element, SequenceTreeElement):
-            for action in element.action_elements[::-1]:
-                action.in_sequence = True
-                self.stack.append((action, self._init_element(action, action.parameters)))
-        else:
-            self.stack.append((element, self._init_element(element, element.parameters)))
+        self.stack.append((element, self._init_element(element, element.parameters)))
 
         # we call the new element without another reevaluate
         self.update(False)
@@ -236,11 +232,21 @@ class DSD:
                 # stop reevaluating
                 self.stack_reevaluate = False
             else:
+                if isinstance(self.stack[-1][1], SequenceElement):
+                    # If we are in a sequence, only one action should be popped
+                    in_sequence = self.stack[-1][1].pop_one()
+                    print(in_sequence)
+                    if in_sequence:
+                        # We are still in the sequence, therefore we do not want to pop the SequenceElement
+                        # We also do not want to reset do_not_reevaluate because an action in the sequence
+                        # may control the stack beyond its own lifetime but in the sequence element's lifetime
+                        return
+                # Remove the last element of the stack
                 self.stack.pop()
 
-        # not matter if a single Element has set do_not_reevaluate, we always want to
-        #   this is because an Element should not control DSD execution beyond its own lifetime
-        self.do_not_reevaluate = False
+            # We will reevaluate even when the popped element set do_not_reevaluate
+            # because no module should control the stack beyond its lifetime
+            self.do_not_reevaluate = False
 
     def set_do_not_reevaluate(self):
         """No reevaluation on next iteration"""
@@ -261,22 +267,10 @@ class DSD:
             # Construct JSON encodable object which represents the current stack
             data = None
             for tree_elem, elem_instance in reversed(self.stack):
-                if isinstance(tree_elem.parent, SequenceTreeElement):
-                    # sequence elements are stored as lists so we encode them in a special way
-                    elem_data = {
-                        'type': 'sequence',
-                        'current': self.stack[-1][0].name,
-                        'content': elem_instance.repr_dict(),
-                        'activation_reason': tree_elem.activation_reason,
-                        'next': data
-                    }
-                    data = elem_data
-
-                else:
-                    elem_data = elem_instance.repr_dict()
-                    elem_data['activation_reason'] = tree_elem.activation_reason
-                    elem_data['next'] = data
-                    data = elem_data
+                elem_data = elem_instance.repr_dict()
+                elem_data['activation_reason'] = tree_elem.activation_reason
+                elem_data['next'] = data
+                data = elem_data
 
             msg = String(data=json.dumps(data))
             self.debug_publisher.publish(msg)
