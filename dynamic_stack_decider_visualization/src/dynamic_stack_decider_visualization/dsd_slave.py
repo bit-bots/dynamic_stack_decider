@@ -66,19 +66,14 @@ class DsdSlave(DSD):
             self.__parse_remote_data(remaining_data['next'], self.tree.root_element)
 
         else:
-            if remaining_data['type'] in ('action', 'decision'):
-                element = parent_element.get_child(remaining_data['activation_reason'])
-                element.debug_data = remaining_data['debug_data']
-                self.push(element)
-            else:
-                # Sequence element
-                element = parent_element.get_child(remaining_data['activation_reason'])
-                element.debug_data = None
+            element = parent_element.get_child(remaining_data['activation_reason'])
+            element.debug_data = remaining_data['debug_data']
+            if remaining_data['type'] == 'sequence':
                 element.current_child = remaining_data['current']
                 self.push(element)
-                return
-
-            self.__parse_remote_data(remaining_data['next'], element)
+            else:
+                self.push(element)
+                self.__parse_remote_data(remaining_data['next'], element)
 
     def subscriber_callback(self, msg):
         # abort if the dsd is not fully loaded yet
@@ -129,20 +124,16 @@ class DsdSlave(DSD):
         element, _ = stack[0]
 
         # Determine correct shape
-        if hasattr(element, 'in_sequence') and element.in_sequence:
-            element = element.parent.parent.get_child(element.activation_reason)
+        if isinstance(element, SequenceTreeElement):
             shape = 'ellipse'
-            name = 'Sequence: '
-            for e in element.action_elements:
-                if element.current_child == e.name:
-                    name += '>'
-                    name += e.name
-                    name += '<'
+
+            def mark_current(name):
+                if name == element.current_child:
+                    return '<' + name + '>'
                 else:
-                    name += e.name
-                name += ', '
-            name = name[:-2]
-            element.name = name
+                    return name
+
+            element.name = 'Sequence: ' + ', '.join(mark_current(e.name) for e in element.action_elements)
         elif isinstance(element, DecisionTreeElement):
             shape = 'box'
         else:
@@ -248,17 +239,14 @@ class DsdSlave(DSD):
             elem_item = QStandardItem()
             elem_item.setEditable(False)
 
-            if hasattr(elem, 'in_sequence') and elem.in_sequence:
-                elem_item.setText('Sequence: ' + ', '.join([e.name for e, _ in self.stack[i:len(self.stack)][::-1]]))
+            if isinstance(elem, SequenceTreeElement):
+                elem_item.setText('Sequence: ' + ', '.join(str(e) for e in elem.action_elements))
                 sequence = True
             else:
                 elem_item.setText(str(elem))
                 sequence = False
 
-            if hasattr(elem, 'debug_data'):
-                self.__append_element_to_item(elem_item, elem.debug_data)
-            else:
-                self.__append_element_to_item(elem_item, None)
+            self.__append_element_to_item(elem_item, elem.debug_data)
 
             model.invisibleRootItem().appendRow(elem_item)
 

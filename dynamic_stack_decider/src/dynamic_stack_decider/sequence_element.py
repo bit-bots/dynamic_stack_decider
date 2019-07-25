@@ -46,9 +46,13 @@ class SequenceElement(AbstractStackElement):
 
         :rtype: dict
         """
+        self.clear_debug_data()
+        self.publish_debug_data('Active Element', self.current_action.__class__.__name__)
+        if self.current_action._debug_data:
+            self.publish_debug_data('Corresponding debug data', self.current_action._debug_data)
         return {
             'type': 'sequence',
             'current': self.current_action.__class__.__name__,
             'content': [elem.repr_dict() for elem in self.actions],
-            'debug_data': {}
+            'debug_data': self._debug_data
         }
