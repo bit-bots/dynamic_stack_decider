@@ -117,31 +117,67 @@ class DsdSlave(DSD):
     def __empty_item_model():
         return QStandardItemModel()
 
+    @staticmethod
+    def __dot_node_from_stack_element(element, active):
+        """
+        :param element: The element to generate the dot node from
+        :type element: AbstractTreeElement
+        :param active: Whether the node is currently active or not
+        :type active: bool
+        :return: The corresponding dot node
+        :rtype: pydot.Node
+        """
+        def param_string(params):
+            # type: (dict) -> str
+            pstr = []
+            for pkey, pval in params.items():
+                pstr.append(pkey + ': ' + pval)
+            pstr = ', '.join(pstr)
+            pstr = ' (' + pstr + ')'
+            return pstr
+
+        if isinstance(element, SequenceTreeElement):
+            shape = 'box'
+
+            label = ['Sequence:']
+            for e in element.action_elements:
+                # Spaces for indentation
+                action_label = '  '
+                # Mark current element (if this sequence is on the stack)
+                if active and e.name == element.current_child:
+                    action_label += '--> '
+                action_label += e.name
+                if e.parameters:
+                    action_label += param_string(e.parameters)
+                label.append(action_label)
+            label = '\n'.join(label)
+
+        elif isinstance(element, DecisionTreeElement):
+            shape = 'ellipse'
+            label = element.name
+
+        else:
+            shape = 'box'
+            label = element.name
+            if element.parameters:
+                label += param_string(element.parameters)
+
+        # Create node in graph
+        uid = str(uuid.uuid4())
+        if active:
+            return pydot.Node(uid, label=label, shape=shape)
+        else:
+            return pydot.Node(uid, label=label, shape=shape, color='lightgray')
+
     def __stack_to_dotgraph(self, stack, dot):
         """
         Recursively modify dot to include every element of the stack
         """
         element, _ = stack[0]
 
+        node = DsdSlave.__dot_node_from_stack_element(element, True)
+
         # Determine correct shape
-        if isinstance(element, SequenceTreeElement):
-            shape = 'ellipse'
-
-            def mark_current(name):
-                if name == element.current_child:
-                    return '<' + name + '>'
-                else:
-                    return name
-
-            element.name = 'Sequence: ' + ', '.join(mark_current(e.name) for e in element.action_elements)
-        elif isinstance(element, DecisionTreeElement):
-            shape = 'box'
-        else:
-            shape = 'ellipse'
-
-        # Create node in graph
-        uid = str(uuid.uuid4())
-        node = pydot.Node(uid, label=element.name, shape=shape)
         dot.add_node(node)
 
         # Append all direct children to graph
@@ -155,25 +191,15 @@ class DsdSlave(DSD):
 
                 # Draw this child as shape because we want to show direct children of elements
                 else:
-                    # Determine shape of child
-                    if isinstance(child, SequenceTreeElement):
-                        child_shape = 'ellipse'
-                        child.name = 'Sequence: ' + ', '.join([e.name for e in child.action_elements])
-                    elif isinstance(child, DecisionTreeElement):
-                        child_shape = 'box'
-                    else:
-                        child_shape = 'ellipse'
-
-                    # Create child node in graph
-                    child_uid = str(uuid.uuid4())
-                    child_node = pydot.Node(child_uid, label=child.name, shape=child_shape, color='lightgray')
+                    child_node = DsdSlave.__dot_node_from_stack_element(child, False)
+                    child_uid = child_node.get_name()
                     dot.add_node(child_node)
 
                 # Connect the child to the parent element
-                edge = pydot.Edge(uid, child_uid, label=activating_result)
+                edge = pydot.Edge(node.get_name(), child_uid, label=activating_result)
                 dot.add_edge(edge)
 
-        return dot, uid
+        return dot, node.get_name()
 
     def __append_element_to_item(self, parent_item, debug_data):
         """
