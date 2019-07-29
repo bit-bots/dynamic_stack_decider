@@ -29,18 +29,19 @@ def discover_elements(path):
     for file in files:
         with open(os.path.join(path, file), "r") as dp:
             for line in dp:
-                try:
-                    m = re.search(r"(?<=^class\s)[a-zA-Z0-9]*", line)
-                    if m:
-                        classname = m.group()
-                        # relative_filename is the name relative to the src directory (from where it will be imported)
-                        # split path at "src" and take the last part
-                        relative_filename = os.path.join(path.split("/src/")[-1], file)                        
-                        module_path = relative_filename.replace("/", ".").replace("\\", ".").replace(".py", "")
+                m = re.search(r"(?<=^class\s)[a-zA-Z0-9]*", line)
+                if m:
+                    classname = m.group()
+                    # relative_filename is the name relative to the src directory (from where it will be imported)
+                    # split path at "src" and take the last part
+                    relative_filename = os.path.join(path.split("/src/")[-1], file)                        
+                    module_path = relative_filename.replace("/", ".").replace("\\", ".").replace(".py", "")
+                    try:
                         module = importlib.import_module(module_path)
+                    except Exception as e:
+                        rospy.logerr('Error while loading class {}: {}'.format(classname, e))
+                    else:
                         elements[classname] = getattr(module, classname)
-                except Exception as e:
-                    print(e)
     return elements
 
 
@@ -235,7 +236,6 @@ class DSD:
                 if isinstance(self.stack[-1][1], SequenceElement):
                     # If we are in a sequence, only one action should be popped
                     in_sequence = self.stack[-1][1].pop_one()
-                    print(in_sequence)
                     if in_sequence:
                         # We are still in the sequence, therefore we do not want to pop the SequenceElement
                         # We also do not want to reset do_not_reevaluate because an action in the sequence
