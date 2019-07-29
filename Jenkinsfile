@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        docker { image 'bitbots:builder' }
+        docker { image 'bitbots_builder', registryUrl 'http://registry.bit-bots.de:5000' }
     }
 
     environment {
