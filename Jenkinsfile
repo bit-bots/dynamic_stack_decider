@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        docker { image 'bitbots:builder' }
-    }
+    agent { docker image: 'bitbots_builder', registryUrl: 'http://registry.bit-bots.de:5000', alwaysPull: true }
 
     environment {
         HOME = "$WORKSPACE"
