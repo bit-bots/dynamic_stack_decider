@@ -16,7 +16,7 @@ pipeline {
                             cd /catkin_ws
 
                             rosdep update
-                            rosdep install -ya
+                            rosdep install -iy --from-paths /catkin_ws/src
                         '''
                     }
                 }
