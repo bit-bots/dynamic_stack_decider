@@ -27,7 +27,7 @@ class SequenceElement(AbstractStackElement):
         :return: True when the pop was successful, False when the end of the sequence has been reached
         """
         self.current_action_index += 1
-        if self.current_action_index == len(self.actions):
+        if self.current_action_index >= len(self.actions):
             return False
         else:
             return True
@@ -46,13 +46,14 @@ class SequenceElement(AbstractStackElement):
 
         :rtype: dict
         """
-        self.clear_debug_data()
         self.publish_debug_data('Active Element', self.current_action.__class__.__name__)
         if self.current_action._debug_data:
             self.publish_debug_data('Corresponding debug data', self.current_action._debug_data)
-        return {
+        data = {
             'type': 'sequence',
             'current': self.current_action.__class__.__name__,
             'content': [elem.repr_dict() for elem in self.actions],
             'debug_data': self._debug_data
         }
+        self.clear_debug_data()
+        return data
