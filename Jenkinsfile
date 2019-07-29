@@ -40,9 +40,9 @@ pipeline {
                     source /catkin_ws/devel/setup.bash
                     roscd dynamic_stack_decider
 
-                    coverage run tests/test_parser.py
+                    python-coverage run tests/test_parser.py
                     cp report.xml $HOME/report.xml
-                    coverage html -d $HOME/coverage/
+                    python-coverage html -d $HOME/coverage/
                 '''
             }
         }
