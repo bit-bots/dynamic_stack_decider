@@ -176,5 +176,3 @@ with open(outFile, 'w') as outdsd:
                         continue
                     
                     stackClean(decisions_out, decisions_stack, indents_dict, result_found_dict) 
-                    
-
