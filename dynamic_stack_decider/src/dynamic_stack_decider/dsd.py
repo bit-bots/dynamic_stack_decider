@@ -233,11 +233,12 @@ class DSD:
             else:
                 if isinstance(self.stack[-1][1], SequenceElement):
                     # If we are in a sequence, only one action should be popped
-                    in_sequence = self.stack[-1][1].pop_one()
-                    if in_sequence:
-                        # We are still in the sequence, therefore we do not want to pop the SequenceElement
+                    if not self.stack[-1][1].in_last_element():
+                        # We are still in the sequence, therefore we do not want to pop the SequenceElement,
+                        # only a single element of the sequence
                         # We also do not want to reset do_not_reevaluate because an action in the sequence
                         # may control the stack beyond its own lifetime but in the sequence element's lifetime
+                        self.stack[-1][1].pop_one()
                         return
                 # Remove the last element of the stack
                 self.stack.pop()
