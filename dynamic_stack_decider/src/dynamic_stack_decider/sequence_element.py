@@ -24,13 +24,14 @@ class SequenceElement(AbstractStackElement):
     def pop_one(self):
         """
         Pop a single element of the sequence
-        :return: True when the pop was successful, False when the end of the sequence has been reached
         """
+        assert not self.in_last_element(), ("It is not possible to pop a single element when"
+                                            "the last element of the sequence is active")
         self.current_action_index += 1
-        if self.current_action_index >= len(self.actions):
-            return False
-        else:
-            return True
+
+    def in_last_element(self):
+        """Returns if the current element is the last element of the sequence"""
+        return self.current_action_index == len(self.actions) - 1
 
     @property
     def current_action(self):
