@@ -69,7 +69,7 @@ class DsdSlave(DSD):
             element = parent_element.get_child(remaining_data['activation_reason'])
             element.debug_data = remaining_data['debug_data']
             if remaining_data['type'] == 'sequence':
-                element.current_child = remaining_data['current']
+                element.current_child = remaining_data['current_action_id']
                 self.push(element)
             else:
                 self.push(element)
@@ -140,11 +140,11 @@ class DsdSlave(DSD):
             shape = 'box'
 
             label = ['Sequence:']
-            for e in element.action_elements:
+            for i, e in enumerate(element.action_elements):
                 # Spaces for indentation
                 action_label = '  '
                 # Mark current element (if this sequence is on the stack)
-                if active and e.name == element.current_child:
+                if active and i == element.current_child:
                     action_label += '--> '
                 action_label += e.name
                 if e.parameters:
