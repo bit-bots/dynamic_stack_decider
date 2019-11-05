@@ -51,7 +51,7 @@ class SequenceElement(AbstractStackElement):
             self.publish_debug_data('Corresponding debug data', self.current_action._debug_data)
         data = {
             'type': 'sequence',
-            'current': self.current_action.__class__.__name__,
+            'current_action_id': self.current_action_index,
             'content': [elem.repr_dict() for elem in self.actions],
             'debug_data': self._debug_data
         }
