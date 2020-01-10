@@ -21,6 +21,7 @@
   <test_depend>python-coverage</test_depend>
   <doc_depend>python-catkin-pkg</doc_depend>
   <depend>rospy</depend>
+  <depend>bitbots_docs</depend>
 
   <export>
     <bitbots_documentation>
