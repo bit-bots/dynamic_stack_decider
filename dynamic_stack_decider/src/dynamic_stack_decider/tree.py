@@ -1,3 +1,4 @@
+import sys
 from typing import List
 
 class Tree:
@@ -56,6 +57,9 @@ class DecisionTreeElement(AbstractTreeElement):
 
     def get_child(self, activating_result):
         """Get the child for a given result"""
+        if not activating_result:
+            # give advice about error
+            sys.exit("Decision return was None. You probably forgot to return a string in your perform method.")
         return self.children[activating_result]
 
     def __repr__(self):
