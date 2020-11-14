@@ -155,6 +155,8 @@ class DsdSlave(DSD):
         elif isinstance(element, DecisionTreeElement):
             shape = 'ellipse'
             label = element.name
+            if element.parameters:
+                label += param_string(element.parameters)
 
         else:
             shape = 'box'
