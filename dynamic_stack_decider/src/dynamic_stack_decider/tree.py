@@ -38,14 +38,16 @@ class DecisionTreeElement(AbstractTreeElement):
     A tree element describing a decision. A decision has children that are executed on a certain result.
     Children can be added with add_child_element
     """
-    def __init__(self, name, parent):
+    def __init__(self, name, parent, parameters=None):
         """
         Create a new DecisionTreeElement
         :param name: the class name of the corresponding AbstractDecisionElement
         :param parent: the parent element, None for the root element
         :type parent: DecisionTreeElement
+        :param parameters: A dictionary of parameters
         """
         AbstractTreeElement.__init__(self, name, parent)
+        self.parameters = parameters
 
         # Dictionary that maps results of the decision to the corresponding child
         self.children = dict()
@@ -63,7 +65,7 @@ class DecisionTreeElement(AbstractTreeElement):
         return self.children[activating_result]
 
     def __repr__(self):
-        r = '$' + self.name + ': '
+        r = '$' + self.name + ' ({}): '.format(self.parameters)
         for result, child in self.children.items():
             r += result + ': {' + repr(child) + '} '
         return r

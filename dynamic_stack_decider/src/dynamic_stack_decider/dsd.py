@@ -65,7 +65,6 @@ class DSD:
     """
 
     start_element = None
-    start_element_data = None
     stack_exec_index = -1
     stack_reevaluate = False
     do_not_reevaluate = False
@@ -137,7 +136,7 @@ class DSD:
         else:
             raise KeyError('Provided element ' + str(element) + 'was not found in registered actions or decisions')
 
-    def _init_element(self, element, parameters=None):
+    def _init_element(self, element):
         """ Initialises the module belonging to the given element. """
         if isinstance(element, SequenceTreeElement):
             initialized_actions = list()
@@ -145,16 +144,15 @@ class DSD:
                 initialized_actions.append(action.module(self.blackboard, self, action.parameters))
             return SequenceElement(self.blackboard, self, initialized_actions)
         else:
-            return element.module(self.blackboard, self, parameters)
+            return element.module(self.blackboard, self, element.parameters)
 
-    def set_start_element(self, start_element, init_data=None):
+    def set_start_element(self, start_element):
         """
         This method defines the start element on the stack, which stays always on the bottom of the stack.
         It should be called in __init__.
         """
         self.start_element = start_element
-        self.start_element_data = init_data
-        self.stack = [(self.start_element, self._init_element(self.start_element, self.start_element_data))]
+        self.stack = [(self.start_element, self._init_element(self.start_element))]
 
     def interrupt(self):
         """
@@ -167,7 +165,7 @@ class DSD:
             # we were currently checking preconditions
             # we stop this, so that update() knows that it has to stop
             self.stack_reevaluate = False
-        self.stack = [(self.start_element, self._init_element(self.start_element, self.start_element_data))]
+        self.stack = [(self.start_element, self._init_element(self.start_element))]
 
     def update(self, reevaluate=True):
         """
@@ -215,7 +213,7 @@ class DSD:
         :param element: The tree element that should be put on top of the stack.
         :type element: AbstractTreeElement
         """
-        self.stack.append((element, self._init_element(element, element.parameters)))
+        self.stack.append((element, self._init_element(element)))
 
         # we call the new element without another reevaluate
         self.update(False)

@@ -129,7 +129,7 @@ class DSDParser:
                     last_indent = indent
         return tree
 
-    def create_tree_element(self, name, parent):
+    def create_tree_element(self, token, parent):
         """
         Create a tree element given a name and a parent.
         The method derives the type (Action/Decision) and optional parameters from the name
@@ -138,17 +138,16 @@ class DSDParser:
         :type parent: DecisionTreeElement
         :return: a TreeElement containing the information given in name
         """
-        if name.startswith('$'):
-            name = name[1:]
-            element = DecisionTreeElement(name, parent)
-        elif name.startswith('@'):
-            name = name[1:]
-            parameters = re.split(r'\s*\+\s*', name)
-            name = parameters.pop(0)
-            parameter_dict = dict()
-            for parameter in parameters:
-                parameter_key, parameter_value = parameter.split(':')
-                parameter_dict[parameter_key] = parameter_value
+        name = token[1:]
+        parameters = re.split(r'\s*\+\s*', name)
+        name = parameters.pop(0)
+        parameter_dict = dict()
+        for parameter in parameters:
+            parameter_key, parameter_value = parameter.split(':')
+            parameter_dict[parameter_key] = parameter_value
+        if token.startswith('$'):
+            element = DecisionTreeElement(name, parent, parameter_dict)
+        elif token.startswith('@'):
             element = ActionTreeElement(name, parent, parameter_dict)
         else:
             raise ParseError()
