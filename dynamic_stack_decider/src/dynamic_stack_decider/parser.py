@@ -131,12 +131,12 @@ class DSDParser:
 
     def create_tree_element(self, token, parent):
         """
-        Create a tree element given a name and a parent.
-        The method derives the type (Action/Decision) and optional parameters from the name
-        :param name: the string describing the element in the dsd description
+        Create a tree element given a token and a parent.
+        The method derives the type (Action/Decision) and optional parameters from the token
+        :param token: the string describing the element in the dsd description
         :param parent: the parent element of the new element, None for root
         :type parent: DecisionTreeElement
-        :return: a TreeElement containing the information given in name
+        :return: a TreeElement containing the information given in token
         """
         name = token[1:]
         parameters = re.split(r'\s*\+\s*', name)
