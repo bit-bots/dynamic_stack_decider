@@ -146,7 +146,7 @@ class DSDParser:
         for parameter in parameters:
             parameter_key, parameter_value = parameter.split(':')
             if parameter_value.startswith('%'):
-                parameter_value = rospy.get_param(parameter_value[1:])
+                parameter_value = str(rospy.get_param(parameter_value[1:]))
             parameter_dict[parameter_key] = parameter_value
         if token.startswith('$'):
             element = DecisionTreeElement(name, parent, parameter_dict)
