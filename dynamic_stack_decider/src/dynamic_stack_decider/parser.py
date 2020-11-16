@@ -1,5 +1,6 @@
 import copy
 import re
+import rospy
 from dynamic_stack_decider.tree import Tree, AbstractTreeElement, DecisionTreeElement, ActionTreeElement, \
     SequenceTreeElement
 
@@ -144,6 +145,8 @@ class DSDParser:
         parameter_dict = dict()
         for parameter in parameters:
             parameter_key, parameter_value = parameter.split(':')
+            if parameter_value.startswith('%'):
+                parameter_value = rospy.get_param(parameter_value[1:])
             parameter_dict[parameter_key] = parameter_value
         if token.startswith('$'):
             element = DecisionTreeElement(name, parent, parameter_dict)
