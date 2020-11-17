@@ -131,7 +131,7 @@ class DsdSlave(DSD):
             # type: (dict) -> str
             pstr = []
             for pkey, pval in params.items():
-                pstr.append(pkey + ': ' + pval)
+                pstr.append(pkey + ': ' + str(pval))
             pstr = ', '.join(pstr)
             pstr = ' (' + pstr + ')'
             return pstr
