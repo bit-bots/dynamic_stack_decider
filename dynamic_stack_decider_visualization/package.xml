@@ -1,6 +1,6 @@
 <package format="2">
   <name>dynamic_stack_decider_visualization</name>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <description>
     A Python GUI plugin to visualize the bitbots-dynamic-stack-decider (DSD)
     <br />
