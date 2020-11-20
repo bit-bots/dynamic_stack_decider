@@ -1,11 +1,9 @@
 import json
-import re
 import uuid
 import pydot
 import rospy
 from std_msgs.msg import String
 from python_qt_binding.QtGui import QStandardItemModel, QStandardItem
-from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 from dynamic_stack_decider.dsd import DSD
 from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement, SequenceTreeElement
 
@@ -14,33 +12,33 @@ class ParseException(Exception):
     pass
 
 
-class DsdSlave(DSD):
+class DsdFollower(DSD):
 
     def __init__(self, debug_topic):
-        DSD.__init__(self, None)
+        super().__init__(None)
 
         self.debug_subscriber = rospy.Subscriber(debug_topic, String, self.subscriber_callback, queue_size=10)
-        self.__cached_msg = None
-        self.__cached_dotgraph = None
-        self.__cached_item_model = None
+        self._cached_msg = None
+        self._cached_dotgraph = None
+        self._cached_item_model = None
         self.initialized = False
 
     def _init_element(self, element, parameters=None):
         """
-        We do not initialize anything on the slave
+        We do not initialize anything on the follower
         """
         return None
 
     def update(self, reevaluate=True):
         """
-        The DSD slave does not execute any code
+        The DSD follower does not execute any code
         """
         pass
 
     def close(self):
         self.debug_subscriber.unregister()
 
-    def __parse_remote_data(self, remaining_data, parent_element=None):
+    def _parse_remote_data(self, remaining_data, parent_element=None):
         """
         Recursively parse the remaining part of a remote DSDs state description message
         :arg parent_element: The Tree element which is the parent of the newly parsed element
@@ -63,7 +61,7 @@ class DsdSlave(DSD):
             self.set_start_element(self.tree.root_element)
             self.tree.root_element.debug_data = remaining_data['debug_data']
 
-            self.__parse_remote_data(remaining_data['next'], self.tree.root_element)
+            self._parse_remote_data(remaining_data['next'], self.tree.root_element)
 
         else:
             element = parent_element.get_child(remaining_data['activation_reason'])
@@ -73,7 +71,7 @@ class DsdSlave(DSD):
                 self.push(element)
             else:
                 self.push(element)
-                self.__parse_remote_data(remaining_data['next'], element)
+                self._parse_remote_data(remaining_data['next'], element)
 
     def subscriber_callback(self, msg):
         # abort if the dsd is not fully loaded yet
@@ -83,19 +81,19 @@ class DsdSlave(DSD):
         msg = msg.data
 
         # abort if nothing changed
-        if msg == self.__cached_msg:
+        if msg == self._cached_msg:
             return
-        self.__cached_dotgraph = None
-        self.__cached_item_model = None
+        self._cached_dotgraph = None
+        self._cached_item_model = None
 
         # parse the remaining stack (without root element)
-        self.__parse_remote_data(json.loads(msg))
+        self._parse_remote_data(json.loads(msg))
 
         # save the message so we know not to reprocess it again
-        self.__cached_msg = msg
+        self._cached_msg = msg
 
     @staticmethod
-    def __error_dotgraph():
+    def _error_dotgraph():
         dot = pydot.Dot(graph_type='digraph')
 
         param_debug_active = rospy.get_param("/debug_active", False)
@@ -114,11 +112,11 @@ class DsdSlave(DSD):
         return dot
 
     @staticmethod
-    def __empty_item_model():
+    def _empty_item_model():
         return QStandardItemModel()
 
     @staticmethod
-    def __dot_node_from_stack_element(element, active):
+    def _dot_node_from_stack_element(element, active):
         """
         :param element: The element to generate the dot node from
         :type element: AbstractTreeElement
@@ -127,6 +125,7 @@ class DsdSlave(DSD):
         :return: The corresponding dot node
         :rtype: pydot.Node
         """
+
         def param_string(params):
             # type: (dict) -> str
             pstr = []
@@ -171,13 +170,13 @@ class DsdSlave(DSD):
         else:
             return pydot.Node(uid, label=label, shape=shape, color='lightgray')
 
-    def __stack_to_dotgraph(self, stack, dot):
+    def _stack_to_dotgraph(self, stack, dot):
         """
         Recursively modify dot to include every element of the stack
         """
         element, _ = stack[0]
 
-        node = DsdSlave.__dot_node_from_stack_element(element, True)
+        node = DsdFollower._dot_node_from_stack_element(element, True)
 
         # Determine correct shape
         dot.add_node(node)
@@ -189,11 +188,11 @@ class DsdSlave(DSD):
 
                 # Since this child is on the stack as well, it should be represented completely
                 if len(stack) > 1 and activating_result == stack[1][0].activation_reason:
-                    dot, child_uid = self.__stack_to_dotgraph(stack[1:], dot)
+                    dot, child_uid = self._stack_to_dotgraph(stack[1:], dot)
 
                 # Draw this child as shape because we want to show direct children of elements
                 else:
-                    child_node = DsdSlave.__dot_node_from_stack_element(child, False)
+                    child_node = DsdFollower._dot_node_from_stack_element(child, False)
                     child_uid = child_node.get_name()
                     dot.add_node(child_node)
 
@@ -203,7 +202,7 @@ class DsdSlave(DSD):
 
         return dot, node.get_name()
 
-    def __append_element_to_item(self, parent_item, debug_data):
+    def _append_element_to_item(self, parent_item, debug_data):
         """
         Append an elements debug_data to a QStandardItem.
 
@@ -211,23 +210,21 @@ class DsdSlave(DSD):
         :type debug_data: dict or list or int or float or str or bool
         :rtype: python_qt_binding.QtGui.QStandardItem
         """
-        if type(debug_data) is list:
+        if isinstance(debug_data, list):
             for i, data in enumerate(debug_data):
                 child_item = QStandardItem()
                 child_item.setText(str(i) + ": ")
                 child_item.setEditable(False)
-                self.__append_element_to_item(child_item, data)
+                self._append_element_to_item(child_item, data)
                 parent_item.appendRow(child_item)
-        elif type(debug_data) is dict:
+        elif isinstance(debug_data, dict):
             for label, data in debug_data.items():
                 child_item = QStandardItem()
                 child_item.setText(str(label) + ": ")
                 child_item.setEditable(False)
-                self.__append_element_to_item(child_item, data)
+                self._append_element_to_item(child_item, data)
                 parent_item.appendRow(child_item)
-        elif type(debug_data) is str or type(debug_data) is int \
-                or type(debug_data) is float or type(debug_data) is bool\
-                or type(debug_data) is unicode:
+        elif isinstance(debug_data, (bool, float, int, str, unicode)):
             parent_item.setText(parent_item.text() + str(debug_data))
 
     def to_dotgraph(self):
@@ -235,17 +232,17 @@ class DsdSlave(DSD):
         Represent the current stack as dotgraph
         """
         # Return cached result if available
-        if self.__cached_dotgraph is not None:
-            return self.__cached_dotgraph
+        if self._cached_dotgraph is not None:
+            return self._cached_dotgraph
 
         # Return special error graph which shows error information when no data was received
-        if self.__cached_msg is None:
-            return self.__error_dotgraph()
+        if self._cached_msg is None:
+            return self._error_dotgraph()
 
         dot = pydot.Dot(graph_type='digraph')
-        dot, uid = self.__stack_to_dotgraph(self.stack, dot)
+        dot, uid = self._stack_to_dotgraph(self.stack, dot)
 
-        self.__cached_dotgraph = dot
+        self._cached_dotgraph = dot
         return dot
 
     def to_QItemModel(self):
@@ -253,12 +250,12 @@ class DsdSlave(DSD):
         Represent the DSDs debug data as QITemModel
         """
         # Return cached result if available
-        if self.__cached_item_model is not None:
-            return self.__cached_item_model
+        if self._cached_item_model is not None:
+            return self._cached_item_model
 
         # Return empty model when no dsd data was received yet
-        if self.__cached_msg is None:
-            return self.__empty_item_model()
+        if self._cached_msg is None:
+            return self._empty_item_model()
 
         # Construct a new item-model
         model = QStandardItemModel()
@@ -274,7 +271,7 @@ class DsdSlave(DSD):
                 elem_item.setText(str(elem))
                 sequence = False
 
-            self.__append_element_to_item(elem_item, elem.debug_data)
+            self._append_element_to_item(elem_item, elem.debug_data)
 
             model.invisibleRootItem().appendRow(elem_item)
 
@@ -287,5 +284,5 @@ class DsdSlave(DSD):
             if sequence:
                 break
 
-        self.__cached_item_model = model
-        return self.__cached_item_model
+        self._cached_item_model = model
+        return self._cached_item_model

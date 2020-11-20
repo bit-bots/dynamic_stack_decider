@@ -35,7 +35,7 @@ import uuid
 import pydot
 import rospkg
 import yaml
-from .dsd_slave import DsdSlave
+from .dsd_follower import DsdFollower
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Qt
 from python_qt_binding.QtGui import QIcon, QPainter, QStandardItemModel
@@ -64,7 +64,7 @@ class DsdVizPlugin(Plugin):
         # Ensure startup state
         self.freeze = False  # Controls whether the state should be updated from remote
         self.locations = parse_locations_yaml()
-        self.dsd = None  # type: DsdSlave
+        self.dsd = None  # type: DsdFollower
         self._init_plugin(context)
 
         # Performance optimization variables
@@ -259,7 +259,7 @@ class DsdVizPlugin(Plugin):
         behaviour_path = os.path.join(dsd_path, dsd_data['relative_dsd_path'])
 
         # Initialize dsd instance
-        dsd = DsdSlave(dsd_data['debug_topic'])
+        dsd = DsdFollower(dsd_data['debug_topic'])
         dsd.register_actions(actions_path)
         dsd.register_decisions(decisions_path)
         dsd.load_behavior(behaviour_path)
