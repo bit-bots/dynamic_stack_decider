@@ -1,13 +1,20 @@
 import sys
-from typing import List
+from typing import List, Optional
 
 class Tree:
     """ A tree defining a behaviour, parsed from a .dsd file """
+
     def __init__(self):
         # The root element of the tree
         self.root_element = None
 
     def set_root_element(self, element):
+        """
+        Set the root element of the tree
+
+        :param element: The root element
+        :type element: AbstractTreeElement
+        """
         self.root_element = element
 
     def __repr__(self):
@@ -19,6 +26,7 @@ class AbstractTreeElement:
     An element (node) in the tree. Do not use directly,
     use one of DecisionTreeElement and ActionTreeElement instead
     """
+
     def __init__(self, name, parent):
         self.name = name
         self.parent = parent
@@ -27,9 +35,18 @@ class AbstractTreeElement:
         self.activation_reason = None
 
     def get_child(self, activating_result):
+        # type: (str) -> Optional[AbstractTreeElement]
+        """
+        Get the child that should be activated for the given result.
+        This makes only sense for DecisionTreeElements; others return None
+
+        :param activating_result: The result that activates the returned child
+        :return: The corresponding child element or None
+        """
         return None
 
     def set_activation_reason(self, reason):
+        """ Set the result that activated this element """
         self.activation_reason = reason
 
 
@@ -38,15 +55,16 @@ class DecisionTreeElement(AbstractTreeElement):
     A tree element describing a decision. A decision has children that are executed on a certain result.
     Children can be added with add_child_element
     """
+
     def __init__(self, name, parent, parameters=None):
         """
         Create a new DecisionTreeElement
+
         :param name: the class name of the corresponding AbstractDecisionElement
         :param parent: the parent element, None for the root element
         :type parent: DecisionTreeElement
-        :param parameters: A dictionary of parameters
         """
-        AbstractTreeElement.__init__(self, name, parent)
+        super(DecisionTreeElement, self).__init__(name, parent)
         self.parameters = parameters
 
         # Dictionary that maps results of the decision to the corresponding child
@@ -77,14 +95,21 @@ class DecisionTreeElement(AbstractTreeElement):
 class SequenceTreeElement(AbstractTreeElement):
     """
     A tree element describing a sequence of actions. Each action
-    has optional parameters that will be passwd to the module on
+    has optional parameters that will be passed to the module on
     creation
     """
+
     def __init__(self, parent):
-        AbstractTreeElement.__init__(self, None, parent)
+        super(SequenceTreeElement, self).__init__(None, parent)
         self.action_elements = list()  # type: List[ActionTreeElement]
 
     def add_action_element(self, action_element):
+        """
+        Add an action element to the sequence
+
+        :param action_element: The action element to be added
+        :type action_element: ActionTreeElement
+        """
         action_element.activation_reason = self.activation_reason
         self.action_elements.append(action_element)
 
@@ -102,6 +127,7 @@ class ActionTreeElement(AbstractTreeElement):
     A tree element describing an action. An action has optional
     parameters that will be passed to the module on creation
     """
+
     def __init__(self, name, parent, parameters=None):
         """
         Create a new ActionTreeElement
@@ -110,7 +136,7 @@ class ActionTreeElement(AbstractTreeElement):
         :type parent: DecisionTreeElement
         :param parameters: A dictionary of parameters
         """
-        AbstractTreeElement.__init__(self, name, parent)
+        super(ActionTreeElement, self).__init__(name, parent)
         self.parameters = parameters
         self.in_sequence = False
 

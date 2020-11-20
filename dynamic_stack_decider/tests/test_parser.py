@@ -1,14 +1,13 @@
 import os
 import unittest
 
-from dynamic_stack_decider.parser import DSDParser
+from dynamic_stack_decider.parser import parse as parse_dsd
 from dynamic_stack_decider.tree import DecisionTreeElement, ActionTreeElement, SequenceTreeElement
 
 
 class ParserTest(unittest.TestCase):
     def setUp(self):
-        parser = DSDParser()
-        self.tree = parser.parse(os.path.join(os.path.dirname(__file__), 'test.dsd'))
+        self.tree = parse_dsd(os.path.join(os.path.dirname(__file__), 'test.dsd'))
 
     def test_root_element(self):
         root_element = self.tree.root_element

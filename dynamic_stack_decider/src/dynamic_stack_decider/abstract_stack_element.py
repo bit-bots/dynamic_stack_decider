@@ -1,4 +1,5 @@
 import rospy
+from typing import Union
 
 
 class AbstractStackElement(object):
@@ -6,9 +7,9 @@ class AbstractStackElement(object):
     The AbstractStackElement is the basis of all elements on the stack.
     It provides some help functions which should not be overloaded.
     The work of an element is done in the :func:`perform`.
-    Each element which inheritaces the AbstractStackElement can be used as a root element on the stack.
+    Each element which inherits from the AbstractStackElement can be used as a root element on the stack.
     """
-    dsd = None
+    _dsd = None
     _init_data = None
 
     def __init__(self, blackboard, dsd, parameters=None):
@@ -18,36 +19,31 @@ class AbstractStackElement(object):
         :param parameters: Optional parameters which serve as arguments to this element
         """
         self._debug_data = {}
-        '''This is a dict in which data can be saved that should get represented on a __repr__ call'''
+        """
+        This is a dict in which data can be saved that should get represented on a __repr__ call.
+        It can be set using publish_debug_data()
+        """
 
-        self.dsd = dsd
+        self._dsd = dsd
         self.blackboard = blackboard
-
-    def setup_internals(self, behaviour):
-        """
-        This method initilizes the internal variables and gets called by the stack machine.
-
-
-        """
 
     def pop(self):
         """
         Help method which pops the element of the stack.
 
-        This method should always be called with a return::
+        This method should always be called with a return:
             return self.pop()
 
         If no return is used, further code is executed after the pop, which leads to difficult to debug behavior.
-
         """
-        self.dsd.pop()
+        self._dsd.pop()
 
     def perform(self, reevaluate=False):
         """
         This method is called when the element is on top of the stack.
         This method has to be overloaded by the implementation!
 
-        :param reevaluate: True if the current method call is a reevaluate of the state. Meaning the modul is not on top of the stack.
+        :param reevaluate: True if the current method call is a reevaluate of the state. Meaning the module is not on top of the stack.
         """
         msg = "You should override perform() in %s" % self.__class__.__name__
         raise NotImplementedError(msg)
@@ -56,20 +52,22 @@ class AbstractStackElement(object):
         """
         An interrupt leads to a complete clearing of the stack.
         """
-        self.dsd.interrupt()
+        self._dsd.interrupt()
 
     def publish_debug_data(self, label, data):
+        # type: (str, Union[dict, list, int, float, str, bool])
         """
-        Publish debug data. Can be viewed using the dsd-visualization
+        Publish debug data. Can be viewed using the DSD visualization
 
         This method is safe to call without wrapping it in a try-catch block although invalid values will
         be wrapped in a `str()` call
 
-        :type label: str
-        :type data: dict or list or int or float or str or bool
+        :param label: A label that describes the given data
+        :param data: data that should be displayed for debugging purposes
         """
         if type(data) not in (dict, list, int, float, str, bool):
-            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON serializable and will be wrapped in str()".format(type(data)))
+            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON"
+                                       "serializable and will be wrapped in str()".format(type(data)))
             data = str(data)
 
         rospy.logdebug('{}: {}'.format(label, data))
@@ -84,17 +82,10 @@ class AbstractStackElement(object):
         self._debug_data = {}
 
     def repr_dict(self):
-        """
-        Represent this stack element as dictionary which is JSON encodable
-
-        :rtype: dict
-        """
+        # type: () -> dict
+        """ Represent this stack element as dictionary which is JSON encodable """
         return {
             'type': 'abstract',
             'classname': self.__class__.__name__,
             'debug_data': self._debug_data
         }
-
-    @staticmethod
-    def sign(x):
-        return -1 if x < 0 else 1
