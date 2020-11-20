@@ -42,6 +42,6 @@ class AbstractDecisionElement(AbstractStackElement):
         This method returns whether the element should be reevaluated. This means that the element is recomputed
         even if it is not on top of the stack. If the decision pushes a different element than in the original perform,
         the stack above this decision is cleared.
-        This can be used to regulary check preconditions, e.g. if the robot knows where the ball is.
+        This can be used to regularly check preconditions, e.g. if the robot knows where the ball is.
         """
         return self._reevaluate

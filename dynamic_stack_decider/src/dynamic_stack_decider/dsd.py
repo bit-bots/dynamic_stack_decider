@@ -5,12 +5,13 @@ import re
 
 import rospy
 from std_msgs.msg import String
+from typing import Dict, List, Tuple, Optional
 
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
 from dynamic_stack_decider.sequence_element import SequenceElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
-from dynamic_stack_decider.parser import DSDParser
+from dynamic_stack_decider.parser import parse as parse_dsd
 from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement, \
     SequenceTreeElement
 
@@ -26,15 +27,15 @@ def discover_elements(path):
     """
     elements = {}
     files = [f for f in os.listdir(path) if f.endswith('.py')]
-    for file in files:
-        with open(os.path.join(path, file), "r") as dp:
+    for f in files:
+        with open(os.path.join(path, f), "r") as dp:
             for line in dp:
                 m = re.search(r"(?<=^class\s)[a-zA-Z0-9]*", line)
                 if m:
                     classname = m.group()
                     # relative_filename is the name relative to the src directory (from where it will be imported)
                     # split path at "src" and take the last part
-                    relative_filename = os.path.join(path.split("/src/")[-1], file)                        
+                    relative_filename = os.path.join(path.split("/src/")[-1], f)
                     module_path = relative_filename.replace("/", ".").replace("\\", ".").replace(".py", "")
                     try:
                         module = importlib.import_module(module_path)
@@ -78,7 +79,7 @@ class DSD:
         """
         self.blackboard = blackboard
 
-        self.tree = None  # type: Tree
+        self.tree = None  # type: Optional[Tree]
         # The stack is implemented as a list of tuples consisting of the tree element
         # and the actual module instance
         self.stack = []  # type: List[Tuple[AbstractTreeElement, AbstractStackElement]]
@@ -92,19 +93,19 @@ class DSD:
             rospy.loginfo('Debugging is active. Publishing on {}'.format(debug_topic))
             self.debug_publisher = rospy.Publisher(debug_topic, String, queue_size=10)
 
-    def register_actions(self, modulepath):
+    def register_actions(self, module_path):
         """
         Register every class in a given path as an action
-        :param modulepath: A path containing files with classes extending AbstractActionElement
+        :param module_path: A path containing files with classes extending AbstractActionElement
         """
-        self.actions = discover_elements(modulepath)
+        self.actions = discover_elements(module_path)
 
-    def register_decisions(self, modulepath):
+    def register_decisions(self, module_path):
         """
         Register every class in a given path as a decision
-        :param modulepath: A path containing files with classes extending AbstractDecisionElement
+        :param module_path: A path containing files with classes extending AbstractDecisionElement
         """
-        self.decisions = discover_elements(modulepath)
+        self.decisions = discover_elements(module_path)
 
     def load_behavior(self, path):
         """
@@ -113,8 +114,7 @@ class DSD:
         :param path: The path to the .dsd file describing the behaviour
         :return:
         """
-        dsd_parser = DSDParser()
-        self.tree = dsd_parser.parse(path)
+        self.tree = parse_dsd(path)
         self._bind_modules(self.tree.root_element)
         self.set_start_element(self.tree.root_element)
 

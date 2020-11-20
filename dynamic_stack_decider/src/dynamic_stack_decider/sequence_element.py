@@ -10,6 +10,7 @@ class SequenceElement(AbstractStackElement):
     sequence element pops itself too.
     This is not an abstract class to inherit from.
     """
+
     def __init__(self, blackboard, dsd, actions=()):
         """
         :param actions: list of initialized action elements
@@ -19,6 +20,11 @@ class SequenceElement(AbstractStackElement):
         self.current_action_index = 0
 
     def perform(self, reevaluate=False):
+        """
+        Perform the current action of the sequence. See AbstractStackElement.perform() for more information
+
+        :param reevaluate: Ignored for SequenceElements
+        """
         self.current_action.perform()
 
     def pop_one(self):
@@ -36,7 +42,8 @@ class SequenceElement(AbstractStackElement):
     @property
     def current_action(self):
         """
-        :return: The currently executed action of the sequence element
+        Returns the currently executed action of the sequence element
+
         :rtype: AbstractActionElement
         """
         return self.actions[self.current_action_index]
