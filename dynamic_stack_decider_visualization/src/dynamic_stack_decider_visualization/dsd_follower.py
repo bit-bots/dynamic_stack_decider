@@ -224,7 +224,7 @@ class DsdFollower(DSD):
                 child_item.setEditable(False)
                 self._append_element_to_item(child_item, data)
                 parent_item.appendRow(child_item)
-        elif isinstance(debug_data, (bool, float, int, str, unicode)):
+        elif isinstance(debug_data, (bool, float, int, str, bytes)):
             parent_item.setText(parent_item.text() + str(debug_data))
 
     def to_dotgraph(self):
