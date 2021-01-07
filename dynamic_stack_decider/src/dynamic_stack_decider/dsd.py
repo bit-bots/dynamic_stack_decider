@@ -1,6 +1,8 @@
 import importlib
+import inspect
 import json
 import os
+import pkgutil
 import re
 
 import rospy
@@ -20,29 +22,22 @@ def discover_elements(path):
     """
     Extract all the classes from the files in the given path and return a dictionary containing them
 
-    :param path: The path containing the files that should be registered
+    :param path: The absolute path containing the files that should be registered
     :type path: str
     :return: A dictionary with class names as keys and classes as values
     :rtype: Dict[str, AbstractStackElement]
     """
     elements = {}
-    files = [f for f in os.listdir(path) if f.endswith('.py')]
-    for f in files:
-        with open(os.path.join(path, f), "r") as dp:
-            for line in dp:
-                m = re.search(r"(?<=^class\s)[a-zA-Z0-9]*", line)
-                if m:
-                    classname = m.group()
-                    # relative_filename is the name relative to the src directory (from where it will be imported)
-                    # split path at "src" and take the last part
-                    relative_filename = os.path.join(path.split("/src/")[-1], f)
-                    module_path = relative_filename.replace("/", ".").replace("\\", ".").replace(".py", "")
-                    try:
-                        module = importlib.import_module(module_path)
-                    except Exception as e:
-                        rospy.logerr('Error while loading class {}: {}'.format(classname, e))
-                    else:
-                        elements[classname] = getattr(module, classname)
+    # base_module is the module name that contains the elements to be discovered
+    # it is the name relative to the src directory (from where it will be imported)
+    base_module = path.split("/src/")[-1].replace('/', '.')
+
+    for _, modname, _ in pkgutil.walk_packages(path=[path], prefix=base_module + '.'):
+        try:
+            module = importlib.import_module(modname)
+            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module))
+        except Exception as e:
+            rospy.logerr('Error while loading class {}: {}'.format(modname, e))
     return elements
 
 
