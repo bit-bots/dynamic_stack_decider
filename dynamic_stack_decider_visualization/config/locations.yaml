@@ -18,3 +18,9 @@ locations:
     relative_action_path: src/bitbots_hcm/hcm_dsd/actions
     relative_decision_path: src/bitbots_hcm/hcm_dsd/decisions
     relative_dsd_path: src/bitbots_hcm/hcm_dsd/hcm.dsd
+  - display_name: Localization
+    package: bitbots_localization
+    debug_topic: /debug/dsd/localization
+    relative_action_path: src/bitbots_localization/localization_dsd/actions
+    relative_decision_path: src/bitbots_localization/localization_dsd/decisions
+    relative_dsd_path: src/bitbots_localization/localization_dsd/localization.dsd
