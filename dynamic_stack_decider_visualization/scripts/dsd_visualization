@@ -2,7 +2,7 @@
 
 import sys
 
-# necessary on some system due to a qt5 bug
+# Necessary on some systems due to a qt5 bug
 import PyKDL
 
 from rqt_gui.main import Main
