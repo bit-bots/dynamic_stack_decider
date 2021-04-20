@@ -1,9 +1,7 @@
 import importlib
 import inspect
 import json
-import os
 import pkgutil
-import re
 
 import rospy
 from std_msgs.msg import String
