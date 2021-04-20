@@ -33,6 +33,7 @@ def discover_elements(path):
     for _, modname, _ in pkgutil.walk_packages(path=[path], prefix=base_module + '.'):
         try:
             module = importlib.import_module(modname)
+            # add all classes which are defined directly in the target module (not imported)
             elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module))
         except Exception as e:
             rospy.logerr('Error while loading class {}: {}'.format(modname, e))
