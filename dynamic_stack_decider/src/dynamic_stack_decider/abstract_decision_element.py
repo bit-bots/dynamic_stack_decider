@@ -1,7 +1,8 @@
+from abc import ABCMeta
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 
-class AbstractDecisionElement(AbstractStackElement):
+class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
     """
     The logic is encapsulated in two types of elements.
     The decision elements define the logical path similar to a behavior tree.

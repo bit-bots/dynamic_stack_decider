@@ -1,8 +1,9 @@
 import rospy
+from abc import ABCMeta, abstractmethod
 from typing import Union
 
 
-class AbstractStackElement(object):
+class AbstractStackElement(metaclass=ABCMeta):
     """
     The AbstractStackElement is the basis of all elements on the stack.
     It provides some help functions which should not be overloaded.
@@ -38,6 +39,7 @@ class AbstractStackElement(object):
         """
         self._dsd.pop()
 
+    @abstractmethod
     def perform(self, reevaluate=False):
         """
         This method is called when the element is on top of the stack.
