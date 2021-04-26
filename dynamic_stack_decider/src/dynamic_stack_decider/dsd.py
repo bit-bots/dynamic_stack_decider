@@ -1,7 +1,8 @@
 import importlib
 import inspect
 import json
-import pkgutil
+import sys
+import os
 
 import rospy
 from std_msgs.msg import String
@@ -26,17 +27,24 @@ def discover_elements(path):
     :rtype: Dict[str, AbstractStackElement]
     """
     elements = {}
-    # base_module is the module name that contains the elements to be discovered
-    # it is the name relative to the src directory (from where it will be imported)
-    base_module = path.split("/src/")[-1].replace('/', '.')
 
-    for _, modname, _ in pkgutil.walk_packages(path=[path], prefix=base_module + '.'):
-        try:
-            module = importlib.import_module(modname)
-            # add all classes which are defined directly in the target module (not imported)
-            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
-        except Exception as e:
-            rospy.logerr('Error while loading class {}: {}'.format(modname, e))
+    # update PYTHONPATH so that path is importable as a module
+    original_pythonpath = sys.path.copy()
+    sys.path.append(os.path.dirname(path))
+
+    # module_name is the importable name that contains the elements to be discovered
+    module_name = os.path.basename(path).rsplit(".", 1)[0]
+
+    try:
+        module = importlib.import_module(module_name)
+        # add all classes which are defined directly in the target module (not imported)
+        elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
+    except Exception as e:
+        rospy.logerr('Error while loading class {}: {}'.format(module_name, e))
+
+    # restore original PYTHONPATH so that everything stays consistent
+    sys.path = original_pythonpath
+
     return elements
 
 
