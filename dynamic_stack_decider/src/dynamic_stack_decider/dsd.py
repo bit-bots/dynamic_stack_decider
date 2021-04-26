@@ -34,7 +34,7 @@ def discover_elements(path):
         try:
             module = importlib.import_module(modname)
             # add all classes which are defined directly in the target module (not imported)
-            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module))
+            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
         except Exception as e:
             rospy.logerr('Error while loading class {}: {}'.format(modname, e))
     return elements
