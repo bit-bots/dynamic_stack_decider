@@ -2,9 +2,10 @@ import importlib
 import inspect
 import json
 import sys
-import os
+import pkgutil
 
 import rospy
+from pathlib import Path
 from std_msgs.msg import String
 from typing import Dict, List, Tuple, Optional
 
@@ -25,22 +26,39 @@ def discover_elements(path):
     :type path: str
     :return: A dictionary with class names as keys and classes as values
     :rtype: Dict[str, AbstractStackElement]
+    :raises ValueError: if path is not an existing directory or file
     """
     elements = {}
-
-    # update PYTHONPATH so that path is importable as a module
+    path = Path(path)
     original_pythonpath = sys.path.copy()
-    sys.path.append(os.path.dirname(path))
 
-    # module_name is the importable name that contains the elements to be discovered
-    module_name = os.path.basename(path).rsplit(".", 1)[0]
+    def discover_module_elements(module_name):
+        try:
+            module = importlib.import_module(module_name)
+            # add all classes which are defined directly in the target module (not imported)
+            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
+        except Exception as e:
+            rospy.logerr('Error while loading class {}: {}'.format(module_name, e))
 
-    try:
-        module = importlib.import_module(module_name)
-        # add all classes which are defined directly in the target module (not imported)
-        elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
-    except Exception as e:
-        rospy.logerr('Error while loading class {}: {}'.format(module_name, e))
+    if path.is_file():
+        # update PYTHONPATH so that path is importable as a module
+        sys.path.append(str(path.parent))
+        if path.name == "__init__.py":
+            module_name = path.parent.name
+        else:
+            module_name = path.name.rsplit(".", 1)[0]
+        discover_module_elements(module_name)
+
+    elif path.is_dir():
+        sys.path.append(str(path))
+        # discover elements defined in the modules __init__.py file
+        discover_module_elements(path.name)
+        # discover elements of all submodules
+        for _, module_name, _ in pkgutil.walk_packages([str(path)]):
+            discover_module_elements(module_name)
+
+    else:
+        raise ValueError('Path {} is not a directory or file'.format(path))
 
     # restore original PYTHONPATH so that everything stays consistent
     sys.path = original_pythonpath
