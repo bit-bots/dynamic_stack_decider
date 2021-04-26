@@ -1,7 +1,8 @@
+from abc import ABCMeta
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 
-class AbstractActionElement(AbstractStackElement):
+class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     """
     One action is similar to a state of an FSM.
     As in this case, the system stays in this state in contrast to the decision elements which are called only for determining the active action.
