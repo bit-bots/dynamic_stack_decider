@@ -25,7 +25,7 @@ $FirstDecision
     BLOCK_COMMENT --> //** COMMENT **// @FirstAction + //** parameters: **// key:value //**
     This tests a block comment beginning in a line with code and
     ending in a line with
-    code (indent is correct, though**//    COMPLICATED_COMMENT --> @FirstAction
+    code (indent is correct, though)**//    COMPLICATED_COMMENT --> @FirstAction
     MULTIPLE_PARAMETERS --> @FirstAction + key1:value1 + key2:value2
     SECOND_SUBBEHAVIOR_1 --> #SecondSubBehavior
     SECOND_SUBBEHAVIOR_2 --> #SecondSubBehavior

@@ -1,26 +1,26 @@
 import os
-import unittest
 
-from dynamic_stack_decider.parser import parse as parse_dsd
+from bitbots_test import TestCase
+from dynamic_stack_decider.parser import parse
 from dynamic_stack_decider.tree import DecisionTreeElement, ActionTreeElement, SequenceTreeElement
 
 
-class ParserTest(unittest.TestCase):
+class DsdParsingTestCase(TestCase):
     def setUp(self):
-        self.tree = parse_dsd(os.path.join(os.path.dirname(__file__), 'test.dsd'))
+        self.tree = parse(os.path.join(os.path.dirname(__file__), 'test_dsd_parsing.dsd'))
 
-    def test_root_element(self):
+    def test_root_element_is_correct(self):
         root_element = self.tree.root_element
         self.assertTrue(isinstance(root_element, DecisionTreeElement))
         self.assertEqual(root_element.name, 'FirstDecision')
 
-    def test_possible_results(self):
+    def test_root_elements_possible_results_are_correct(self):
         self.assertSetEqual(set(self.tree.root_element.children.keys()),
                             {'ACTION', 'DECISION', 'SUBBEHAVIOR', 'SEQUENCE', 'PARAMETERS',
                              'LINE_COMMENT', 'BLOCK_COMMENT', 'COMPLICATED_COMMENT',
                              'MULTIPLE_PARAMETERS', 'SECOND_SUBBEHAVIOR_1', 'SECOND_SUBBEHAVIOR_2'})
 
-    def test_following_elements(self):
+    def test_walking_the_tree_via_child_elements(self):
         first_child = self.tree.root_element.get_child('ACTION')
         self.assertEqual(first_child.name, 'FirstAction')
         self.assertTrue(isinstance(first_child, ActionTreeElement))
@@ -29,59 +29,75 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(second_child.name, 'SecondDecision')
         self.assertTrue(isinstance(second_child, DecisionTreeElement))
 
+        fourth_child = self.tree.root_element.get_child('SEQUENCE')
+        self.assertTrue(isinstance(fourth_child, SequenceTreeElement))
+
     def test_nested_decision(self):
         decision_child = self.tree.root_element.get_child('DECISION')
         self.assertSetEqual(set(decision_child.children.keys()), {'FIRST', 'SECOND'})
+
         self.assertEqual(decision_child.get_child('FIRST').name, 'FirstAction')
         self.assertTrue(isinstance(decision_child.get_child('FIRST'), ActionTreeElement))
+
         self.assertEqual(decision_child.get_child('SECOND').name, 'SecondAction')
         self.assertTrue(isinstance(decision_child.get_child('SECOND'), ActionTreeElement))
 
     def test_sub_behavior(self):
         sub_behavior_root_decision = self.tree.root_element.get_child('SUBBEHAVIOR')
+
         self.assertEqual(sub_behavior_root_decision.name, 'ThirdDecision')
         self.assertTrue(isinstance(sub_behavior_root_decision, DecisionTreeElement))
         self.assertSetEqual(set(sub_behavior_root_decision.children.keys()), {'FIRST', 'SECOND'})
+
         self.assertEqual(sub_behavior_root_decision.get_child('FIRST').name, 'FirstAction')
         self.assertTrue(isinstance(sub_behavior_root_decision.get_child('FIRST'), ActionTreeElement))
+
         self.assertEqual(sub_behavior_root_decision.get_child('SECOND').name, 'SecondAction')
         self.assertTrue(isinstance(sub_behavior_root_decision.get_child('SECOND'), ActionTreeElement))
 
     def test_sequence_element(self):
         sequence_element = self.tree.root_element.get_child('SEQUENCE')
+
         self.assertTrue(isinstance(sequence_element, SequenceTreeElement))
         self.assertEqual(len(sequence_element.action_elements), 2)
+
         first_action = sequence_element.action_elements[0]
         self.assertEqual(first_action.name, 'FirstAction')
         self.assertTrue(isinstance(first_action, ActionTreeElement))
+
         second_action = sequence_element.action_elements[1]
         self.assertEqual(second_action.name, 'SecondAction')
         self.assertTrue(isinstance(second_action, ActionTreeElement))
 
     def test_parameters(self):
         parameter_element = self.tree.root_element.get_child('PARAMETERS')
+
         self.assertEqual(parameter_element.name, 'FirstAction')
         self.assertTrue(isinstance(parameter_element, ActionTreeElement))
         self.assertDictEqual(parameter_element.parameters, {'key': 'value'})
 
     def test_line_comment(self):
         comment_element = self.tree.root_element.get_child('LINE_COMMENT')
+
         self.assertEqual(comment_element.name, 'FirstAction')
         self.assertTrue(isinstance(comment_element, ActionTreeElement))
 
     def test_block_comment(self):
         comment_element = self.tree.root_element.get_child('BLOCK_COMMENT')
+
         self.assertEqual(comment_element.name, 'FirstAction')
         self.assertTrue(isinstance(comment_element, ActionTreeElement))
         self.assertDictEqual(comment_element.parameters, {'key': 'value'})
 
     def test_complicated_comment(self):
         comment_element = self.tree.root_element.get_child('COMPLICATED_COMMENT')
+
         self.assertEqual(comment_element.name, 'FirstAction')
         self.assertTrue(isinstance(comment_element, ActionTreeElement))
 
     def test_multiple_parameters(self):
         parameter_element = self.tree.root_element.get_child('MULTIPLE_PARAMETERS')
+
         self.assertEqual(parameter_element.name, 'FirstAction')
         self.assertTrue(isinstance(parameter_element, ActionTreeElement))
         self.assertDictEqual(parameter_element.parameters,
@@ -90,17 +106,12 @@ class ParserTest(unittest.TestCase):
     def test_multiple_subbehavior_references(self):
         sub_behavior_1_root_decision = self.tree.root_element.get_child('SECOND_SUBBEHAVIOR_1')
         sub_behavior_2_root_decision = self.tree.root_element.get_child('SECOND_SUBBEHAVIOR_2')
+
         self.assertEqual(sub_behavior_1_root_decision.name, sub_behavior_2_root_decision.name)
         self.assertEqual(sub_behavior_1_root_decision.activation_reason, 'SECOND_SUBBEHAVIOR_1')
         self.assertEqual(sub_behavior_2_root_decision.activation_reason, 'SECOND_SUBBEHAVIOR_2')
 
 
-if __name__ == '__main__':
-    try:
-        import xmlrunner
-        with open('report.xml', 'wb') as output:
-            unittest.main(
-                testRunner=xmlrunner.XMLTestRunner(output=output)
-            )
-    except ImportError:
-        unittest.main()
+if __name__ == "__main__":
+    from bitbots_test import run_unit_tests
+    run_unit_tests()
