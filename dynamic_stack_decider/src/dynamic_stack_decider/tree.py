@@ -80,7 +80,13 @@ class DecisionTreeElement(AbstractTreeElement):
         if not activating_result:
             # give advice about error
             sys.exit("Decision return was None. You probably forgot to return a string in your perform method.")
-        return self.children[activating_result]
+
+        if activating_result in self.children.keys():
+            return self.children[activating_result]
+        elif "ELSE" in self.children.keys():
+            return self.children["ELSE"]
+        else:
+            raise KeyError(f"{activating_result} does not lead to a child of {str(self)} and no ELSE was specified")
 
     def __repr__(self):
         r = '$' + self.name + ' ({}): '.format(self.parameters)
