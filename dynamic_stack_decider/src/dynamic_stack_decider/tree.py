@@ -86,7 +86,7 @@ class DecisionTreeElement(AbstractTreeElement):
         elif "ELSE" in self.children.keys():
             return self.children["ELSE"]
         else:
-            return None
+            raise KeyError(f"{activating_result} does not lead to a child of {str(self)} and no ELSE was specified")
 
     def __repr__(self):
         r = '$' + self.name + ' ({}): '.format(self.parameters)
