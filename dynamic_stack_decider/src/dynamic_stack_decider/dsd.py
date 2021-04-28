@@ -118,14 +118,14 @@ class DSD:
         Register every class in a given path as an action
         :param module_path: A path containing files with classes extending AbstractActionElement
         """
-        self.actions = discover_elements(module_path)
+        self.actions = {k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractActionElement)}
 
     def register_decisions(self, module_path):
         """
         Register every class in a given path as a decision
         :param module_path: A path containing files with classes extending AbstractDecisionElement
         """
-        self.decisions = discover_elements(module_path)
+        self.decisions = {k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractDecisionElement)}
 
     def load_behavior(self, path):
         """
