@@ -50,11 +50,11 @@ def discover_elements(path):
         discover_module_elements(module_name)
 
     elif path.is_dir():
-        sys.path.append(str(path))
+        sys.path.append(str(path.parent))
         # discover elements defined in the modules __init__.py file
         discover_module_elements(path.name)
         # discover elements of all submodules
-        for _, module_name, _ in pkgutil.walk_packages([str(path)]):
+        for _, module_name, _ in pkgutil.walk_packages([str(path)], prefix=path.name + "."):
             discover_module_elements(module_name)
 
     else:
