@@ -11,28 +11,35 @@ class TestAction(AbstractActionElement):
 
 
 class ModuleDiscoveryTestCase(TestCase):
-    element_dir = Path(__file__).parent / "test_elements"
+    project_dir = Path(__file__).parent / "test_project"
 
     def test_single_file(self):
         # execution
-        elements = discover_elements(str(self.element_dir / "one.py"))
+        elements = discover_elements(str(self.project_dir / "actions" / "test_action.py"))
 
         # verification
-        self.assertEqual(list(elements.keys()), ["OneTestAction", "OneTestDecision"])
+        self.assertEqual(list(elements.keys()), ["TestAction"])
 
     def test_explicit_init_py_file(self):
         # execution
-        elements = discover_elements(str(self.element_dir / "__init__.py"))
+        elements = discover_elements(str(self.project_dir / "actions" / "__init__.py"))
 
         # verification
-        self.assertEqual(list(elements.keys()), ["InitTestAction", "InitTestDecision"])
+        self.assertEqual(list(elements.keys()), ["InitAction"])
 
     def test_directory(self):
         # execution
-        elements = discover_elements(str(self.element_dir))
+        elements = discover_elements(str(self.project_dir / "actions"))
 
         # verification
-        self.assertEqual(list(elements.keys()), ["InitTestAction", "InitTestDecision", "OneTestAction", "OneTestDecision", "TwoTestAction", "TwoTestDecision"])
+        self.assertEqual(list(elements.keys()), ["InitAction", "AmbiguousAction", "TestAction"])
+
+    def test_directory_traversal(self):
+        # execution
+        elements = discover_elements(str(self.project_dir))
+
+        # verification
+        self.assertEqual(list(elements.keys()), ["InitAction", "AmbiguousAction", "TestAction", "InitDecision", "AmbiguousDecision", "TestDecision"])
 
     def test_file_with_unrelated_class(self):
         # execution
