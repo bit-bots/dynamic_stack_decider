@@ -1,9 +1,11 @@
 import importlib
 import inspect
 import json
+import sys
 import pkgutil
 
 import rospy
+from pathlib import Path
 from std_msgs.msg import String
 from typing import Dict, List, Tuple, Optional
 
@@ -24,19 +26,43 @@ def discover_elements(path):
     :type path: str
     :return: A dictionary with class names as keys and classes as values
     :rtype: Dict[str, AbstractStackElement]
+    :raises ValueError: if path is not an existing directory or file
     """
     elements = {}
-    # base_module is the module name that contains the elements to be discovered
-    # it is the name relative to the src directory (from where it will be imported)
-    base_module = path.split("/src/")[-1].replace('/', '.')
+    path = Path(path)
+    original_pythonpath = sys.path.copy()
 
-    for _, modname, _ in pkgutil.walk_packages(path=[path], prefix=base_module + '.'):
+    def discover_module_elements(module_name):
         try:
-            module = importlib.import_module(modname)
+            module = importlib.import_module(module_name)
             # add all classes which are defined directly in the target module (not imported)
-            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module))
+            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
         except Exception as e:
-            rospy.logerr('Error while loading class {}: {}'.format(modname, e))
+            rospy.logerr('Error while loading class {}: {}'.format(module_name, e))
+
+    if path.is_file():
+        # update PYTHONPATH so that path is importable as a module
+        sys.path.append(str(path.parent))
+        if path.name == "__init__.py":
+            module_name = path.parent.name
+        else:
+            module_name = path.name.rsplit(".", 1)[0]
+        discover_module_elements(module_name)
+
+    elif path.is_dir():
+        sys.path.append(str(path.parent))
+        # discover elements defined in the modules __init__.py file
+        discover_module_elements(path.name)
+        # discover elements of all submodules
+        for _, module_name, _ in pkgutil.walk_packages([str(path)], prefix=path.name + "."):
+            discover_module_elements(module_name)
+
+    else:
+        raise ValueError('Path {} is not a directory or file'.format(path))
+
+    # restore original PYTHONPATH so that everything stays consistent
+    sys.path = original_pythonpath
+
     return elements
 
 
@@ -92,14 +118,14 @@ class DSD:
         Register every class in a given path as an action
         :param module_path: A path containing files with classes extending AbstractActionElement
         """
-        self.actions = discover_elements(module_path)
+        self.actions = {k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractActionElement)}
 
     def register_decisions(self, module_path):
         """
         Register every class in a given path as a decision
         :param module_path: A path containing files with classes extending AbstractDecisionElement
         """
-        self.decisions = discover_elements(module_path)
+        self.decisions = {k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractDecisionElement)}
 
     def load_behavior(self, path):
         """
