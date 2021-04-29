@@ -1,6 +1,7 @@
-@Library('bitbots_jenkins_library') import de.bitbots.jenkins.PackageDefinition
+@Library('bitbots_jenkins_library') import de.bitbots.jenkins.*;
 
-bitbotsPipeline([
-	new PackageDefinition("dynamic_stack_decider", true),
-	new PackageDefinition("dynamic_stack_decider_visualization", true),
-] as PackageDefinition[])
+defineProperties()
+
+def pipeline = new BitbotsPipeline(this, env, currentBuild, scm)
+pipeline.configurePipelineForPackage(new PackagePipelineSettings(new PackageDefinition("dynamic_stack_decider")))
+pipeline.execute()
