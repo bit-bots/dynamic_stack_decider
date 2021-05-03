@@ -1,0 +1,25 @@
+---
+# See http://doku.bit-bots.de/meta/manual/software/ci.html#make-package-resolvable-in-ci
+check-presence-script: '#!/bin/bash
+
+  test -d $BITBOTS_CATKIN_WORKSPACE/src/dynamic_stack_decider_visualization'
+depends:
+- bitbots_docs
+- dynamic_stack_decider
+- python3-rospkg
+- python_qt_binding
+- qt_dotgraph
+- rosgraph
+- rosgraph_msgs
+- roslib
+- rosnode
+- rospy
+- rosservice
+- rostopic
+- rqt_gui
+- rqt_gui_py
+exec-path: dynamic_stack_decider-master/dynamic_stack_decider_visualization
+install-script: '#!/bin/bash
+
+  cp -r . $BITBOTS_CATKIN_WORKSPACE/src/dynamic_stack_decider_visualization'
+uri: https://github.com/bit-bots/dynamic_stack_decider/archive/refs/heads/master.tar.gz
