@@ -30,6 +30,8 @@
   <exec_depend>rqt_gui_py</exec_depend>
   <exec_depend>dynamic_stack_decider</exec_depend>
 
+  <doc_depend>bitbots_docs</doc_depend>
+
   <export>
     <architecture_independent/>
     <rqt_gui plugin="${prefix}/plugin_dsd_viz.xml"/>
