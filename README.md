@@ -161,6 +161,14 @@ It reads the locations of different DSDs from `config/locations.yaml` and can be
 The visualization shows the DSD tree with the currently active actions and decisions on the left and the current stack on the right.
 More information can be added to the right side by calling `self.publish_debug_data(label, data)` in any action or decision.
 
+## Examples
+
+Here are a few projects that use the DSD and can be used for reference:
+* The [Bit-Bots Head Behavior](https://github.com/bit-bots/bitbots_behavior/tree/master/bitbots_head_behavior/src/bitbots_head_behavior)
+* The [Bit-Bots Body Behavior](https://github.com/bit-bots/bitbots_behavior/tree/master/bitbots_body_behavior/src/bitbots_body_behavior)
+* The [Bit-Bots Humanoid Control Module](https://github.com/bit-bots/bitbots_motion/tree/master/bitbots_hcm/src/bitbots_hcm/hcm_dsd)
+* The [Parser Test](https://github.com/bit-bots/dynamic_stack_decider/tree/master/dynamic_stack_decider/tests) in this repository
+
 ## The Paper
 
 The framework is also described in more depth in [ASDS – Active Self Deciding Stack: A Lightweight Approach for Dynamic Decision Making](https://www.researchgate.net/profile/Martin_Poppinga/publication/327509965_ASDS_-_Active_Self_Deciding_Stack_A_Lightweight_Approach_for_Dynamic_Decision_Making/links/5b92824b4585153a5301618e/ASDS-Active-Self-Deciding-Stack-A-Lightweight-Approach-for-Dynamic-Decision-Making.pdf)
