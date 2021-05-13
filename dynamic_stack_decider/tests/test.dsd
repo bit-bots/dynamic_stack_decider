@@ -8,6 +8,15 @@ $ThirdDecision
     FIRST --> @FirstAction
     SECOND --> @SecondAction
 
+#ParameterSubBehavior + key1 + key2
+$ThirdDecision
+    FIRST --> @FirstAction + key:*key1
+    SECOND --> @SecondAction + key:*key2
+
+#NestedParameterSubBehavior + key_nested1 + key_nested2
+$ThirdDecision
+    FIRST --> #ParameterSubBehavior + key1:*key_nested1 + key2:*key_nested2
+
 -->TestDSD
 $FirstDecision
     ACTION --> @FirstAction
@@ -17,6 +26,8 @@ $FirstDecision
     SUBBEHAVIOR --> #SubBehavior
     SEQUENCE --> @FirstAction, @SecondAction
     PARAMETERS --> @FirstAction + key:value
+    PARAMETER_DECISION --> $FirstDecision + key:value
+        FIRST --> @FirstAction
     LINE_COMMENT --> @FirstAction // Comment at end of line
     // This tests a single line comment and should be ignored
     //** This tests a
@@ -29,3 +40,5 @@ $FirstDecision
     MULTIPLE_PARAMETERS --> @FirstAction + key1:value1 + key2:value2
     SECOND_SUBBEHAVIOR_1 --> #SecondSubBehavior
     SECOND_SUBBEHAVIOR_2 --> #SecondSubBehavior
+    PARAMETER_SUBBEHAVIOR --> #ParameterSubBehavior + key2:value2 + key1:value1
+    NESTED_PARAMETER_SUBBEHAVIOR --> #NestedParameterSubBehavior + key_nested2:nested2 + key_nested1:nested1

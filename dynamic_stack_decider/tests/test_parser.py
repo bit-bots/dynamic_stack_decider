@@ -18,7 +18,8 @@ class ParserTest(unittest.TestCase):
         self.assertSetEqual(set(self.tree.root_element.children.keys()),
                             {'ACTION', 'DECISION', 'SUBBEHAVIOR', 'SEQUENCE', 'PARAMETERS',
                              'LINE_COMMENT', 'BLOCK_COMMENT', 'COMPLICATED_COMMENT',
-                             'MULTIPLE_PARAMETERS', 'SECOND_SUBBEHAVIOR_1', 'SECOND_SUBBEHAVIOR_2'})
+                             'MULTIPLE_PARAMETERS', 'SECOND_SUBBEHAVIOR_1', 'SECOND_SUBBEHAVIOR_2',
+                             'PARAMETER_DECISION', 'PARAMETER_SUBBEHAVIOR', 'NESTED_PARAMETER_SUBBEHAVIOR'})
 
     def test_following_elements(self):
         first_child = self.tree.root_element.get_child('ACTION')
@@ -58,10 +59,16 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(second_action.name, 'SecondAction')
         self.assertTrue(isinstance(second_action, ActionTreeElement))
 
-    def test_parameters(self):
+    def test_action_parameters(self):
         parameter_element = self.tree.root_element.get_child('PARAMETERS')
         self.assertEqual(parameter_element.name, 'FirstAction')
         self.assertTrue(isinstance(parameter_element, ActionTreeElement))
+        self.assertDictEqual(parameter_element.parameters, {'key': 'value'})
+
+    def test_decision_parameters(self):
+        parameter_element = self.tree.root_element.get_child('PARAMETER_DECISION')
+        self.assertEqual(parameter_element.name, 'FirstDecision')
+        self.assertTrue(isinstance(parameter_element, DecisionTreeElement))
         self.assertDictEqual(parameter_element.parameters, {'key': 'value'})
 
     def test_line_comment(self):
@@ -93,6 +100,21 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(sub_behavior_1_root_decision.name, sub_behavior_2_root_decision.name)
         self.assertEqual(sub_behavior_1_root_decision.activation_reason, 'SECOND_SUBBEHAVIOR_1')
         self.assertEqual(sub_behavior_2_root_decision.activation_reason, 'SECOND_SUBBEHAVIOR_2')
+
+    def test_parameter_subbehavior(self):
+        parameter_subbehavior_decision = self.tree.root_element.get_child('PARAMETER_SUBBEHAVIOR')
+        first_action = parameter_subbehavior_decision.get_child('FIRST')
+        self.assertEqual(first_action.parameters, {'key': 'value1'})
+        second_action = parameter_subbehavior_decision.get_child('SECOND')
+        self.assertEqual(second_action.parameters, {'key': 'value2'})
+
+    def test_nested_parameter_subbehavior(self):
+        subbehavior_decision = self.tree.root_element.get_child('NESTED_PARAMETER_SUBBEHAVIOR')
+        inner_subbehavior_decision = subbehavior_decision.get_child('FIRST')
+        first_action = inner_subbehavior_decision.get_child('FIRST')
+        self.assertEqual(first_action.parameters, {'key': 'nested1'})
+        second_action = inner_subbehavior_decision.get_child('SECOND')
+        self.assertEqual(second_action.parameters, {'key': 'nested2'})
 
 
 if __name__ == '__main__':

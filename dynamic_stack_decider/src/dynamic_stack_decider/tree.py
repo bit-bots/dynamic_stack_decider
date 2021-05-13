@@ -7,6 +7,7 @@ class Tree:
     def __init__(self):
         # The root element of the tree
         self.root_element = None
+        self.parameter_list = []
 
     def set_root_element(self, element):
         """
@@ -56,7 +57,7 @@ class DecisionTreeElement(AbstractTreeElement):
     Children can be added with add_child_element
     """
 
-    def __init__(self, name, parent, parameters=None):
+    def __init__(self, name, parent, parameters=None, unset_parameters=None):
         """
         Create a new DecisionTreeElement
 
@@ -65,7 +66,8 @@ class DecisionTreeElement(AbstractTreeElement):
         :type parent: DecisionTreeElement
         """
         super(DecisionTreeElement, self).__init__(name, parent)
-        self.parameters = parameters
+        self.parameters = parameters or dict()
+        self.unset_parameters = unset_parameters or dict()
 
         # Dictionary that maps results of the decision to the corresponding child
         self.children = dict()
@@ -134,16 +136,18 @@ class ActionTreeElement(AbstractTreeElement):
     parameters that will be passed to the module on creation
     """
 
-    def __init__(self, name, parent, parameters=None):
+    def __init__(self, name, parent, parameters=None, unset_parameters=None):
         """
         Create a new ActionTreeElement
         :param name: the class name of the corresponding AbstractActionElement
         :param parent: the parent element
         :type parent: DecisionTreeElement
         :param parameters: A dictionary of parameters
+        :param unset_parameters: A dictionary of parameters that must be set later
         """
         super(ActionTreeElement, self).__init__(name, parent)
-        self.parameters = parameters
+        self.parameters = parameters or dict()
+        self.unset_parameters = unset_parameters or dict()
         self.in_sequence = False
 
     def __repr__(self):

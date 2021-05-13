@@ -76,7 +76,11 @@ def parse(file_path):
                 if indent == 0 and line_content.startswith('#'):
                     # This is the declaration of a new subtree
                     current_subtree = Tree()
-                    subtrees[line_content[1:]] = current_subtree
+                    name = line_content[1:]
+                    parameter_list = re.split(r'\s*\+\s*', name)
+                    name = parameter_list.pop(0)
+                    current_subtree.parameter_list = parameter_list
+                    subtrees[name] = current_subtree
                     current_tree_element = None
                     last_indent = indent
                     continue
@@ -93,16 +97,40 @@ def parse(file_path):
                     if call.startswith('#'):
                         # A subtree is called here.
                         subtree_name = call.strip('#')
-                        if subtree_name not in subtrees:
-                            raise AssertionError('Error parsing line {}: {} not defined'.format(lnr, call))
+                        name, parameters, unset_parameters = _extract_parameters(subtree_name)
+                        if name not in subtrees:
+                            raise AssertionError('Error parsing line {}: {} not defined'.format(lnr, name))
+                        subtree = subtrees[name]
+                        if (set(parameters.keys()) | set(unset_parameters.keys())) != set(subtree.parameter_list):
+                            raise AssertionError('Error parsing line {}: Invalid parameters specified.\n'
+                                                 'Available parameters are {}, specified parameters are {}.'
+                                                 .format(lnr,
+                                                         set(parameters.keys()) | set(unset_parameters.keys()),
+                                                         set(subtree.parameter_list)))
                         # The root element of the subtree should be placed in this tree position
                         if current_tree_element is None:
                             # The current subtree is empty, set the subtree as its root element
-                            current_subtree.set_root_element(subtrees[subtree_name].root_element)
+                            current_subtree.set_root_element(subtree.root_element)
                         else:
+                            # Copy this subtree
+                            subtree_copy = copy.deepcopy(subtree.root_element)
+                            # Evaluate all unset parameters
+                            to_evaluate = [subtree_copy]
+                            while len(to_evaluate) > 0:
+                                current = to_evaluate.pop(0)
+                                for name, reference in current.unset_parameters.items():
+                                    if reference in parameters:
+                                        current.parameters[name] = parameters[reference]
+                                    elif reference in unset_parameters:
+                                        current.unset_parameters[name] = unset_parameters[reference]
+                                    else:
+                                        raise AssertionError('Error evaluating subtree call in line {}: '
+                                                             'Unknown reference to {}.'.format(lnr, reference))
+                                if isinstance(current, DecisionTreeElement):
+                                    to_evaluate.extend(current.children.values())
+
                             # Append this subtree in the current position
-                            current_tree_element.add_child_element(copy.copy(subtrees[subtree_name].root_element),
-                                                                   result)
+                            current_tree_element.add_child_element(subtree_copy, result)
 
                     elif re.search(r'\s*,\s*', call):
                         # A sequence element
@@ -136,6 +164,31 @@ def parse(file_path):
     return tree
 
 
+def _extract_parameters(token):
+    """
+    Extract parameters from a token string in the form of name + key1:value1 + key2:value2
+    :param token: the string containing the name and the parameters
+    :type token: str
+    :return: the name, a dict of set parameters, a dict of unset parameters
+    """
+    parameters = re.split(r'\s*\+\s*', token)
+    name = parameters.pop(0)
+    parameter_dict = dict()
+    unset_parameters = dict()
+    for parameter in parameters:
+        parameter_key, parameter_value = parameter.split(':')
+        if parameter_value.startswith('%'):
+            parameter_value = rospy.get_param(parameter_value[1:])
+            parameter_dict[parameter_key] = parameter_value
+        elif parameter_value.startswith('*'):
+            # This is a reference to the value specified in the subtree
+            unset_parameters[parameter_key] = parameter_value[1:]
+        else:
+            parameter_value = yaml.safe_load(parameter_value)  # universal interpretation of correct datatype
+            parameter_dict[parameter_key] = parameter_value
+    return name, parameter_dict, unset_parameters
+
+
 def _create_tree_element(token, parent):
     """
     Create a tree element given a token and a parent.
@@ -145,21 +198,11 @@ def _create_tree_element(token, parent):
     :type parent: Union[DecisionTreeElement, SequenceTreeElement]
     :return: a TreeElement containing the information given in token
     """
-    name = token[1:]
-    parameters = re.split(r'\s*\+\s*', name)
-    name = parameters.pop(0)
-    parameter_dict = dict()
-    for parameter in parameters:
-        parameter_key, parameter_value = parameter.split(':')
-        if parameter_value.startswith('%'):
-            parameter_value = rospy.get_param(parameter_value[1:])
-        else:
-            parameter_value = yaml.safe_load(parameter_value)  # universal interpretation of correct datatype
-        parameter_dict[parameter_key] = parameter_value
+    name, parameter_dict, unset_parameters = _extract_parameters(token[1:])
     if token.startswith('$'):
-        element = DecisionTreeElement(name, parent, parameter_dict)
+        element = DecisionTreeElement(name, parent, parameter_dict, unset_parameters)
     elif token.startswith('@'):
-        element = ActionTreeElement(name, parent, parameter_dict)
+        element = ActionTreeElement(name, parent, parameter_dict, unset_parameters)
     else:
         raise ParseError()
     return element
