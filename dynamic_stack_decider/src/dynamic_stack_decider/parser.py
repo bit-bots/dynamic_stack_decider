@@ -118,6 +118,13 @@ def parse(file_path):
                             to_evaluate = [subtree_copy]
                             while len(to_evaluate) > 0:
                                 current = to_evaluate.pop(0)
+                                if isinstance(current, SequenceTreeElement):
+                                    # For sequence elements, only evaluate the actions
+                                    to_evaluate.extend(current.action_elements)
+                                    continue
+                                elif isinstance(current, DecisionTreeElement):
+                                    to_evaluate.extend(current.children.values())
+
                                 for name, reference in current.unset_parameters.items():
                                     if reference in parameters:
                                         current.parameters[name] = parameters[reference]
@@ -126,8 +133,6 @@ def parse(file_path):
                                     else:
                                         raise AssertionError('Error evaluating subtree call in line {}: '
                                                              'Unknown reference to {}.'.format(lnr, reference))
-                                if isinstance(current, DecisionTreeElement):
-                                    to_evaluate.extend(current.children.values())
 
                             # Append this subtree in the current position
                             current_tree_element.add_child_element(subtree_copy, result)
