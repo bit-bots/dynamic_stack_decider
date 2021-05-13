@@ -105,16 +105,18 @@ class ParserTest(unittest.TestCase):
         parameter_subbehavior_decision = self.tree.root_element.get_child('PARAMETER_SUBBEHAVIOR')
         first_action = parameter_subbehavior_decision.get_child('FIRST')
         self.assertEqual(first_action.parameters, {'key': 'value1'})
-        second_action = parameter_subbehavior_decision.get_child('SECOND')
-        self.assertEqual(second_action.parameters, {'key': 'value2'})
+        action_sequence = parameter_subbehavior_decision.get_child('SECOND')
+        self.assertEqual(action_sequence.action_elements[0].parameters, {'key': 'value2'})
+        self.assertEqual(action_sequence.action_elements[1].parameters, {'key': 'value2'})
 
     def test_nested_parameter_subbehavior(self):
         subbehavior_decision = self.tree.root_element.get_child('NESTED_PARAMETER_SUBBEHAVIOR')
         inner_subbehavior_decision = subbehavior_decision.get_child('FIRST')
         first_action = inner_subbehavior_decision.get_child('FIRST')
         self.assertEqual(first_action.parameters, {'key': 'nested1'})
-        second_action = inner_subbehavior_decision.get_child('SECOND')
-        self.assertEqual(second_action.parameters, {'key': 'nested2'})
+        action_sequence = inner_subbehavior_decision.get_child('SECOND')
+        self.assertEqual(action_sequence.action_elements[0].parameters, {'key': 'nested2'})
+        self.assertEqual(action_sequence.action_elements[1].parameters, {'key': 'nested2'})
 
 
 if __name__ == '__main__':
