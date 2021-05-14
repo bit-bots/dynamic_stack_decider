@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>dynamic_stack_decider</name>
-  <version>0.5.2</version>
+  <version>0.5.3</version>
   <description>The bitbots_dsd is an extended form
     of a behaviour state machine. It works like a stack where
     classes describing decisions or actions are pushed on top,

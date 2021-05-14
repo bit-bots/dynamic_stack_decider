@@ -204,8 +204,18 @@ class DSD:
                 # check all elements except the top one, but not the actions
                 if isinstance(instance, AbstractDecisionElement) and instance.get_reevaluate():
                     result = instance.perform(True)
-                    # Push element if necessary
-                    if result != self.stack[self.stack_exec_index + 1][0].activation_reason:
+                    # Check whether this result would be an ELSE case
+                    result_is_else = result not in tree_element.children.keys()
+                    # Push element if necessary. Necessary means that the result is unequal to the activation reason of
+                    # the next element in the stack, i.e. the decision has changed. However we have to account for ELSE!
+                    if result_is_else and self.stack[self.stack_exec_index + 1][0].activation_reason == 'ELSE':
+                        # In this case the result returned by the decision does not match any of its possible results,
+                        # therefore it goes in the 'ELSE' category. If the activation reason is 'ELSE', the decision did
+                        # not change, that means no change in the stack is necessary.
+                        pass
+                    elif result != self.stack[self.stack_exec_index + 1][0].activation_reason:
+                        # In this case, however, the activation reason actually did change. Therefore, we have to
+                        # discard everything in the stack above the current decision and push the new result.
                         self.stack = self.stack[0:self.stack_exec_index + 1]
                         self.stack_reevaluate = False
                         self.push(tree_element.get_child(result))
