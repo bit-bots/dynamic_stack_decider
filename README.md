@@ -35,6 +35,10 @@ It decides about the mode of the head and returns the string `BALL` or `PATTERN`
 By convention, the returned strings are in capital letters.
 The returned strings are indented and followed by an arrow; the element after the arrow is executed when the corresponding string is returned by the decision.
 
+<p align="center">
+<img src="dynamic_stack_decider/docs/_static/DSD_Stack_Example.png" alt="A visualization of the Stack" width="350px"/>
+</p>
+
 The underlying model for the DSD is a stack.
 The root element (`Mode` in the example above) is always at the bottom of the stack.
 When it makes a decision, the result is pushed on the stack and executed, for example the `BallSeen` decision.
