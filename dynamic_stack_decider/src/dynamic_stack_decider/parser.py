@@ -69,7 +69,7 @@ def parse(file_path):
                 if next_is_start:
                     # This line contains the root element of the main tree
                     next_is_start = False
-                    element = _create_tree_element(line_content, current_tree_element)
+                    element = _create_tree_element(line_content, current_tree_element, lnr)
                     tree.set_root_element(element)
                     current_tree_element = element
 
@@ -97,16 +97,16 @@ def parse(file_path):
                     if call.startswith('#'):
                         # A subtree is called here.
                         subtree_name = call.strip('#')
-                        name, parameters, unset_parameters = _extract_parameters(subtree_name)
+                        name, parameters, unset_parameters = _extract_parameters(subtree_name, lnr)
                         if name not in subtrees:
-                            raise AssertionError('Error parsing line {}: {} not defined'.format(lnr, name))
+                            raise ParseError('Error parsing line {}: {} not defined'.format(lnr, name))
                         subtree = subtrees[name]
                         if (set(parameters.keys()) | set(unset_parameters.keys())) != set(subtree.parameter_list):
-                            raise AssertionError('Error parsing line {}: Invalid parameters specified.\n'
-                                                 'Available parameters are {}, specified parameters are {}.'
-                                                 .format(lnr,
-                                                         set(parameters.keys()) | set(unset_parameters.keys()),
-                                                         set(subtree.parameter_list)))
+                            raise ParseError('Error parsing line {}: Invalid parameters specified.\n'
+                                             'Available parameters are {}, specified parameters are {}.'
+                                             .format(lnr,
+                                                     set(parameters.keys()) | set(unset_parameters.keys()),
+                                                     set(subtree.parameter_list)))
                         # The root element of the subtree should be placed in this tree position
                         if current_tree_element is None:
                             # The current subtree is empty, set the subtree as its root element
@@ -131,8 +131,8 @@ def parse(file_path):
                                     elif reference in unset_parameters:
                                         current.unset_parameters[name] = unset_parameters[reference]
                                     else:
-                                        raise AssertionError('Error evaluating subtree call in line {}: '
-                                                             'Unknown reference to {}.'.format(lnr, reference))
+                                        raise ParseError('Error evaluating subtree call in line {}: '
+                                                         'Unknown reference to {}.'.format(lnr, reference))
 
                             # Append this subtree in the current position
                             current_tree_element.add_child_element(subtree_copy, result)
@@ -140,17 +140,17 @@ def parse(file_path):
                     elif re.search(r'\s*,\s*', call):
                         # A sequence element
                         actions = re.split(r'\s*,\s*', call)
-                        element = _create_sequence_element(actions, current_tree_element)
+                        element = _create_sequence_element(actions, current_tree_element, lnr)
                         current_tree_element.add_child_element(element, result)
 
                     elif call.startswith('@'):
                         # An action is called
-                        element = _create_tree_element(call, current_tree_element)
+                        element = _create_tree_element(call, current_tree_element, lnr)
                         current_tree_element.add_child_element(element, result)
 
                     elif call.startswith('$'):
                         # A decision is called
-                        element = _create_tree_element(call, current_tree_element)
+                        element = _create_tree_element(call, current_tree_element, lnr)
                         current_tree_element.add_child_element(element, result)
                         current_tree_element = element
 
@@ -161,7 +161,7 @@ def parse(file_path):
 
                 else:
                     # No arrow, must be the beginning of a new subtree
-                    element = _create_tree_element(line_content, current_tree_element)
+                    element = _create_tree_element(line_content, current_tree_element, lnr)
                     current_subtree.set_root_element(element)
                     current_tree_element = element
 
@@ -169,11 +169,13 @@ def parse(file_path):
     return tree
 
 
-def _extract_parameters(token):
+def _extract_parameters(token, lnr):
     """
     Extract parameters from a token string in the form of name + key1:value1 + key2:value2
     :param token: the string containing the name and the parameters
     :type token: str
+    :param lnr: Line number of the current line (used for error messages)
+    :type lnr: int
     :return: the name, a dict of set parameters, a dict of unset parameters
     """
     parameters = re.split(r'\s*\+\s*', token)
@@ -181,7 +183,11 @@ def _extract_parameters(token):
     parameter_dict = dict()
     unset_parameters = dict()
     for parameter in parameters:
-        parameter_key, parameter_value = parameter.split(':')
+        try:
+            parameter_key, parameter_value = parameter.split(':')
+        except ValueError:
+            raise ParseError('Error parsing line {}: Invalid parameter list'.format(lnr))
+
         if parameter_value.startswith('%'):
             parameter_value = rospy.get_param(parameter_value[1:])
             parameter_dict[parameter_key] = parameter_value
@@ -194,16 +200,18 @@ def _extract_parameters(token):
     return name, parameter_dict, unset_parameters
 
 
-def _create_tree_element(token, parent):
+def _create_tree_element(token, parent, lnr):
     """
     Create a tree element given a token and a parent.
     The method derives the type (Action/Decision) and optional parameters from the token
     :param token: the string describing the element in the dsd description
     :param parent: the parent element of the new element, None for root
     :type parent: Union[DecisionTreeElement, SequenceTreeElement]
+    :param lnr: Line number of the current line (used for error messages)
+    :type lnr: int
     :return: a TreeElement containing the information given in token
     """
-    name, parameter_dict, unset_parameters = _extract_parameters(token[1:])
+    name, parameter_dict, unset_parameters = _extract_parameters(token[1:], lnr)
     if token.startswith('$'):
         element = DecisionTreeElement(name, parent, parameter_dict, unset_parameters)
     elif token.startswith('@'):
@@ -213,7 +221,7 @@ def _create_tree_element(token, parent):
     return element
 
 
-def _create_sequence_element(actions, parent):
+def _create_sequence_element(actions, parent, lnr):
     """
     Create a new sequence element
 
@@ -221,11 +229,13 @@ def _create_sequence_element(actions, parent):
     :type actions: List[str]
     :param parent: The parent element of the sequence
     :type parent: AbstractDecisionElement
+    :param lnr: Line number of the current line (used for error messages)
+    :type lnr: int
     :return: The sequence element
     """
     sequence_element = SequenceTreeElement(parent)
     for action in actions:
-        element = _create_tree_element(action, sequence_element)
+        element = _create_tree_element(action, sequence_element, lnr)
         if not isinstance(element, ActionTreeElement):
             raise ParseError('In a sequence, only actions are allowed!')
         sequence_element.add_action_element(element)
