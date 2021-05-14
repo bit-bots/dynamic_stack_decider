@@ -171,4 +171,4 @@ Here are a few projects that use the DSD and can be used for reference:
 
 ## The Paper
 
-The framework is also described in more depth in [ASDS – Active Self Deciding Stack: A Lightweight Approach for Dynamic Decision Making](https://www.researchgate.net/profile/Martin_Poppinga/publication/327509965_ASDS_-_Active_Self_Deciding_Stack_A_Lightweight_Approach_for_Dynamic_Decision_Making/links/5b92824b4585153a5301618e/ASDS-Active-Self-Deciding-Stack-A-Lightweight-Approach-for-Dynamic-Decision-Making.pdf)
+The framework is also described in more depth in [DSD – Dynamic Stack Decider](https://link.springer.com/article/10.1007/s12369-021-00768-8)
