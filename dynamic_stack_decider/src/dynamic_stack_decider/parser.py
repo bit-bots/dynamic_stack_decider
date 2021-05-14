@@ -174,6 +174,8 @@ def _extract_parameters(token, lnr):
     Extract parameters from a token string in the form of name + key1:value1 + key2:value2
     :param token: the string containing the name and the parameters
     :type token: str
+    :param lnr: Line number of the current line (used for error messages)
+    :type lnr: int
     :return: the name, a dict of set parameters, a dict of unset parameters
     """
     parameters = re.split(r'\s*\+\s*', token)
@@ -205,6 +207,8 @@ def _create_tree_element(token, parent, lnr):
     :param token: the string describing the element in the dsd description
     :param parent: the parent element of the new element, None for root
     :type parent: Union[DecisionTreeElement, SequenceTreeElement]
+    :param lnr: Line number of the current line (used for error messages)
+    :type lnr: int
     :return: a TreeElement containing the information given in token
     """
     name, parameter_dict, unset_parameters = _extract_parameters(token[1:], lnr)
@@ -225,6 +229,8 @@ def _create_sequence_element(actions, parent, lnr):
     :type actions: List[str]
     :param parent: The parent element of the sequence
     :type parent: AbstractDecisionElement
+    :param lnr: Line number of the current line (used for error messages)
+    :type lnr: int
     :return: The sequence element
     """
     sequence_element = SequenceTreeElement(parent)
