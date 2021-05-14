@@ -63,7 +63,7 @@ Finally, to actually execute the stack decider, `update` should be called repeat
 
 On each update, all elements on the stack except the top elements are reevaluated from bottom to top, if requested.
 Then, the top element is executed.
-If it was a decision, the resulting action is pushed on the stack, to be executed in the next call to `update`
+If it was a decision, the resulting action is pushed on the stack, to be executed in the next call to `update`.
 
 ## Reevaluation
 
@@ -75,6 +75,8 @@ To achieve that behavior, the `get_reevaluate` should be implemented, either to 
 When the element is reevaluated, `perform` is called on the element.
 If the result of `perform` is the same as the last time it was called, nothing happens and the next decision is reevaluated.
 If the result of `perform` is different from the last time, everything above the reevaluated decision is discarded and a new element, depending on the result of `perform`, is pushed on the stack and executed.
+
+An action can call `self.do_not_reevaluate()` to avoid reevaluation of the stack on the next call to `update`. 
 
 ## Sequence elements
 
