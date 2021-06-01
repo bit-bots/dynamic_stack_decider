@@ -292,7 +292,7 @@ class DSD:
         Helper method to publish debug data
         """
 
-        if self.debug_active:
+        if self.debug_active and self.debug_publisher.get_num_connections() != 0:
             # Construct JSON encodable object which represents the current stack
             data = None
             for tree_elem, elem_instance in reversed(self.stack):
