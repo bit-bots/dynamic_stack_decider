@@ -225,11 +225,15 @@ class DSD:
                         return
                 self.stack_exec_index += 1
             self.stack_reevaluate = False
+        # Get the top module
+        current_tree_element, current_instance = self.stack[-1]
         if reevaluate:
             # reset flag
             self.do_not_reevaluate = False
-        # run the top module
-        current_tree_element, current_instance = self.stack[-1]
+        if current_instance.never_reevaluate:
+            # Deactivate reevaluation if action had never_reevaluate flag
+            self.do_not_reevaluate = True
+        # Run the top module
         result = current_instance.perform()
         if isinstance(current_instance, AbstractDecisionElement):
             self.push(current_tree_element.get_child(result))
