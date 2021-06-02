@@ -80,7 +80,7 @@ When the element is reevaluated, `perform` is called on the element.
 If the result of `perform` is the same as the last time it was called, nothing happens and the next decision is reevaluated.
 If the result of `perform` is different from the last time, everything above the reevaluated decision is discarded and a new element, depending on the result of `perform`, is pushed on the stack and executed.
 
-An action can call `self.do_not_reevaluate()` to avoid reevaluation of the stack on the next call to `update`. 
+An action can call `self.do_not_reevaluate()` to avoid reevaluation of the stack on the next call to `update`. Alternatively the parameters (see #Parameters) `r` or `reevaluate` can be used in the dsd file to enable or disable the reevaluation during a specific action. 
 
 ## Sequence elements
 
