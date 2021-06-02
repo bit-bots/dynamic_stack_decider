@@ -12,6 +12,18 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     Actions do not push further elements on the stack but command actions on lower-level modules like new movement goals.
     If the action is complete, it can remove itself from the stack by performing a pop command.
     """
+    def __init__(self, blackboard, dsd, parameters):
+        """
+        Constructor of the action element
+        :param blackboard: Shared blackboard for data exchange between elements
+        :param dsd: The stack decider which has this element on its stack.
+        :param parameters: Optional parameters which serve as arguments to this element
+        """
+        super().__init__(blackboard, dsd, parameters)
+        # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
+        if parameters is not None:
+            self.never_reevaluate = not parameters.get('r', True) or not parameters.get('reevaluate', True)
+
 
     def do_not_reevaluate(self):
         """
