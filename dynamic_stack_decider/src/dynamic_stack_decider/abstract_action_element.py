@@ -14,7 +14,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     """
     def __init__(self, blackboard, dsd, parameters):
         """
-        Konstructor of the action element
+        Constructor of the action element
         :param blackboard: Shared blackboard for data exchange between elements
         :param dsd: The stack decider which has this element on its stack.
         :param parameters: Optional parameters which serve as arguments to this element
