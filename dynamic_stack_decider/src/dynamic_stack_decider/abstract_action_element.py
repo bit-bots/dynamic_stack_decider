@@ -21,7 +21,8 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         """
         super().__init__(blackboard, dsd, parameters)
         # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
-        self.never_reevaluate = not parameters.get('r', True) or not parameters.get('reevaluate', True)
+        if parameters is not None:
+            self.never_reevaluate = not parameters.get('r', True) or not parameters.get('reevaluate', True)
 
 
     def do_not_reevaluate(self):
