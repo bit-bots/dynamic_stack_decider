@@ -12,7 +12,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     Actions do not push further elements on the stack but command actions on lower-level modules like new movement goals.
     If the action is complete, it can remove itself from the stack by performing a pop command.
     """
-    def __init__(self, blackboard, dsd, parameters):
+    def __init__(self, blackboard, dsd, parameters=None):
         """
         Constructor of the action element
         :param blackboard: Shared blackboard for data exchange between elements
