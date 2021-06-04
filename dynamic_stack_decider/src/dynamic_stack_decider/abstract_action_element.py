@@ -23,7 +23,8 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
         if parameters is not None:
             self.never_reevaluate = not parameters.get('r', True) or not parameters.get('reevaluate', True)
-
+        else:
+            self.never_reevaluate = False
 
     def do_not_reevaluate(self):
         """
