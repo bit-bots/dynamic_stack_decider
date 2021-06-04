@@ -27,7 +27,6 @@ class AbstractStackElement(metaclass=ABCMeta):
 
         self._dsd = dsd
         self.blackboard = blackboard
-        self.never_reevaluate = False
 
     def pop(self):
         """

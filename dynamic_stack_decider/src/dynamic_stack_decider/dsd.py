@@ -230,9 +230,10 @@ class DSD:
         if reevaluate:
             # reset flag
             self.do_not_reevaluate = False
-        if current_instance.never_reevaluate:
+        if (isinstance(current_instance, AbstractActionElement) and current_instance.never_reevaluate or
+                isinstance(current_instance, SequenceElement) and current_instance.current_action.never_reevaluate):
             # Deactivate reevaluation if action had never_reevaluate flag
-            self.do_not_reevaluate = True
+            self.set_do_not_reevaluate()
         # Run the top module
         result = current_instance.perform()
         if isinstance(current_instance, AbstractDecisionElement):
