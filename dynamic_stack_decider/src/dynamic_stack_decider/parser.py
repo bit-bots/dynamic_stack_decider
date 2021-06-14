@@ -161,7 +161,11 @@ def parse(file_path):
 
                 else:
                     # No arrow, must be the beginning of a new subtree
-                    element = _create_tree_element(line_content, current_tree_element, lnr)
+                    if re.search(r'\s*,\s*', line):
+                        actions = re.split(r'\s*,\s*', line)
+                        element = _create_sequence_element(actions, current_tree_element, lnr)
+                    else:
+                        element = _create_tree_element(line_content, current_tree_element, lnr)
                     current_subtree.set_root_element(element)
                     current_tree_element = element
 
