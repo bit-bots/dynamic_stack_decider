@@ -19,7 +19,8 @@ class ParserTest(unittest.TestCase):
                             {'ACTION', 'DECISION', 'SUBBEHAVIOR', 'SEQUENCE', 'PARAMETERS',
                              'LINE_COMMENT', 'BLOCK_COMMENT', 'COMPLICATED_COMMENT',
                              'MULTIPLE_PARAMETERS', 'SECOND_SUBBEHAVIOR_1', 'SECOND_SUBBEHAVIOR_2',
-                             'PARAMETER_DECISION', 'PARAMETER_SUBBEHAVIOR', 'NESTED_PARAMETER_SUBBEHAVIOR'})
+                             'PARAMETER_DECISION', 'PARAMETER_SUBBEHAVIOR', 'NESTED_PARAMETER_SUBBEHAVIOR',
+                             'SEQUENCE_TREE'})
 
     def test_following_elements(self):
         first_child = self.tree.root_element.get_child('ACTION')
@@ -117,6 +118,12 @@ class ParserTest(unittest.TestCase):
         action_sequence = inner_subbehavior_decision.get_child('SECOND')
         self.assertEqual(action_sequence.action_elements[0].parameters, {'key': 'nested2'})
         self.assertEqual(action_sequence.action_elements[1].parameters, {'key': 'nested2'})
+
+    def test_sequence_tree(self):
+        sequence_tree = self.tree.root_element.get_child('SEQUENCE_TREE')
+        self.assertTrue(isinstance(sequence_tree, SequenceTreeElement))
+        self.assertEqual(sequence_tree.action_elements[0].name, 'FirstAction')
+        self.assertEqual(sequence_tree.action_elements[1].name, 'SecondAction')
 
 
 if __name__ == '__main__':
