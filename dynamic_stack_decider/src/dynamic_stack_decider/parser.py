@@ -221,7 +221,7 @@ def _create_tree_element(token, parent, lnr):
     elif token.startswith('@'):
         element = ActionTreeElement(name, parent, parameter_dict, unset_parameters)
     else:
-        raise ParseError()
+        raise ParseError('An element has to start with either $ or @')
     return element
 
 
