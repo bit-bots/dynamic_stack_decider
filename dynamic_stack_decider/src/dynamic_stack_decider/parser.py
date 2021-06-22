@@ -192,6 +192,10 @@ def _extract_parameters(token, lnr):
         except ValueError:
             raise ParseError('Error parsing line {}: Invalid parameter list'.format(lnr))
 
+        if ' ' in parameter_value:
+            raise ParseError('Error parsing line {}: Parameter values should not contain spaces. '
+                             'Did you forget a comma?'.format(lnr))
+
         if parameter_value.startswith('%'):
             parameter_value = rospy.get_param(parameter_value[1:])
             parameter_dict[parameter_key] = parameter_value
