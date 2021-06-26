@@ -167,6 +167,9 @@ It reads the locations of different DSDs from `config/locations.yaml` and can be
 The visualization shows the DSD tree with the currently active actions and decisions on the left and the current stack on the right.
 More information can be added to the right side by calling `self.publish_debug_data(label, data)` in any action or decision.
 
+## DSD Development GUI
+If you want to use a graphical user interface to define your DSD, we recommend [this repository](https://github.com/bit-bots/dsd-gui)
+
 ## Examples
 
 Here are a few projects that use the DSD and can be used for reference:
