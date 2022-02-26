@@ -1,11 +1,9 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(dynamic_stack_decider)
 
-find_package(catkin REQUIRED COMPONENTS rospy bitbots_docs)
+find_package(ament_cmake_python REQUIRED)
+find_package(bitbots_docs REQIRED)
 
-catkin_python_setup()
 enable_bitbots_docs()
-
-catkin_package(
-)
-
+ament_python_install_package(${PROJECT_NAME})
+ament_package()
