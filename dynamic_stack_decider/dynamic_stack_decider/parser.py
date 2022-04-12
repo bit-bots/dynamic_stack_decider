@@ -3,7 +3,8 @@ import re
 from dynamic_stack_decider.tree import Tree, AbstractTreeElement, DecisionTreeElement, ActionTreeElement, \
     SequenceTreeElement
 import yaml
-import rospy
+import rclpy
+from rclpy.node import Node
 from typing import List, Union
 
 

@@ -4,7 +4,8 @@ import json
 import sys
 import pkgutil
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from pathlib import Path
 from std_msgs.msg import String
 from typing import Dict, List, Tuple, Optional
@@ -13,10 +14,11 @@ from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
 from dynamic_stack_decider.sequence_element import SequenceElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
-from dynamic_stack_decider.parser import parse as parse_dsd
 from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement, \
     SequenceTreeElement
 
+from dynamic_stack_decider.logger import get_logger
+from dynamic_stack_decider.parser import parse as parse_dsd
 
 def discover_elements(path):
     """
@@ -38,7 +40,7 @@ def discover_elements(path):
             # add all classes which are defined directly in the target module (not imported)
             elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
         except Exception as e:
-            rospy.logerr('Error while loading class {}: {}'.format(module_name, e))
+            get_logger().error('Error while loading class {}: {}'.format(module_name, e))
 
     if path.is_file():
         # update PYTHONPATH so that path is importable as a module
@@ -110,8 +112,8 @@ class DSD:
         # Setup debug publisher if needed
         self.debug_active = debug_topic is not None
         if self.debug_active:
-            rospy.loginfo('Debugging is active. Publishing on {}'.format(debug_topic))
-            self.debug_publisher = rospy.Publisher(debug_topic, String, queue_size=10)
+            get_logger().info('Debugging is active. Publishing on {}'.format(debug_topic))
+            self.debug_publisher = rclpy.create_publisher(String, debug_topic, 10)
 
     def register_actions(self, module_path):
         """
@@ -297,7 +299,7 @@ class DSD:
         Helper method to publish debug data
         """
 
-        if self.debug_active and self.debug_publisher.get_num_connections() != 0:
+        if self.debug_active and self.debug_publisher.get_subscription_count() != 0:
             # Construct JSON encodable object which represents the current stack
             data = None
             for tree_elem, elem_instance in reversed(self.stack):

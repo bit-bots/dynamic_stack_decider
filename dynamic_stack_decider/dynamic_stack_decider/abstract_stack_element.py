@@ -1,7 +1,7 @@
-import rospy
 from abc import ABCMeta, abstractmethod
 from typing import Union
 
+from dynamic_stack_decider.logger import get_logger
 
 class AbstractStackElement(metaclass=ABCMeta):
     """
@@ -68,11 +68,10 @@ class AbstractStackElement(metaclass=ABCMeta):
         :param data: data that should be displayed for debugging purposes
         """
         if type(data) not in (dict, list, int, float, str, bool):
-            rospy.logdebug_throttle(1, "The supplied debug data of type {} is not JSON"
-                                       "serializable and will be wrapped in str()".format(type(data)))
+            get_logger().debug("The supplied debug data of type {} is not JSON serializable and will be wrapped in str()".format(type(data)), throttle_duration_sec=1)
             data = str(data)
 
-        rospy.logdebug('{}: {}'.format(label, data))
+        get_logger().debug('{}: {}'.format(label, data))
         self._debug_data[label] = data
 
     def clear_debug_data(self):
