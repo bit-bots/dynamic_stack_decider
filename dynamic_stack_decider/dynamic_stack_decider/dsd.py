@@ -68,7 +68,7 @@ def discover_elements(path):
     return elements
 
 
-class DSD:
+class DSD(Node):
     """
     One decision is defined as the root decision, the starting point.
     Each decision element, which is pushed on the stack, is immediately executed until no further element is pushed.
@@ -93,12 +93,13 @@ class DSD:
     do_not_reevaluate = False
     old_representation = ""
 
-    def __init__(self, blackboard, debug_topic=None):
+    def __init__(self, blackboard, debug_topic=None, node=None):
         """
         :param blackboard: Blackboard instance which will be available to all modules
         :param debug_topic:  Topic on which debug data should be published
         :type debug_topic: str
         """
+
         self.blackboard = blackboard
 
         self.tree = None  # type: Optional[Tree]
@@ -111,9 +112,9 @@ class DSD:
 
         # Setup debug publisher if needed
         self.debug_active = debug_topic is not None
-        if self.debug_active:
+        if self.debug_active and node is not None:
             get_logger().info('Debugging is active. Publishing on {}'.format(debug_topic))
-            self.debug_publisher = rclpy.create_publisher(String, debug_topic, 10)
+            self.debug_publisher = node.create_publisher(String, debug_topic, 10)
 
     def register_actions(self, module_path):
         """
