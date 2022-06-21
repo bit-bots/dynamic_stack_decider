@@ -113,7 +113,7 @@ class DSD(Node):
         # Setup debug publisher if needed
         self.debug_active = debug_topic is not None
         if self.debug_active and node is not None:
-            get_logger().info('Debugging is active. Publishing on {}'.format(debug_topic))
+            get_logger().debug('Debugging is active. Publishing on {}'.format(debug_topic))
             self.debug_publisher = node.create_publisher(String, debug_topic, 10)
 
     def register_actions(self, module_path):
