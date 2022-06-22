@@ -33,7 +33,6 @@ import os
 import uuid
 
 import pydot
-import rospkg
 import yaml
 from .dsd_follower import DsdFollower
 from python_qt_binding import loadUi
@@ -46,10 +45,11 @@ from rqt_gui_py.plugin import Plugin
 
 from .interactive_graphics_view import InteractiveGraphicsView
 
+from ament_index_python import get_package_share_directory
+from rqt_gui.main import Main
 
 def parse_locations_yaml():
-    rp = rospkg.RosPack()
-    path = os.path.join(rp.get_path('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
+    path = os.path.join(get_package_share_directory('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
     with open(path, 'r') as f:
         return yaml.load(f)['locations']
 
@@ -58,6 +58,7 @@ class DsdVizPlugin(Plugin):
 
     def __init__(self, context):
         super(DsdVizPlugin, self).__init__(context)
+        self._node = context.node
 
         self._initialized = False  # This gets set to true once the plugin hast completely finished loading
 
@@ -78,8 +79,7 @@ class DsdVizPlugin(Plugin):
         self._widget.setObjectName(self.objectName())
 
         # load qt ui definition from file
-        rp = rospkg.RosPack()
-        ui_file = os.path.join(rp.get_path("dynamic_stack_decider_visualization"), "resource", "StackmachineViz.ui")
+        ui_file = os.path.join(get_package_share_directory("dynamic_stack_decider_visualization"), "resource", "StackmachineViz.ui")
         loadUi(ui_file, self._widget, {"InteractiveGraphicsView": InteractiveGraphicsView})
 
         # initialize qt scene
@@ -251,18 +251,26 @@ class DsdVizPlugin(Plugin):
         else:
             raise ValueError('no dsd with name {} found'.format(name))
 
-        # Figure out full paths with the help of rospkg
-        rospack = rospkg.RosPack()
-        dsd_path = rospack.get_path(dsd_data['package'])
+        # Figure out full paths
+        dsd_path = get_package_share_directory(dsd_data['package'])
         actions_path = os.path.join(dsd_path, dsd_data['relative_action_path'])
         decisions_path = os.path.join(dsd_path, dsd_data['relative_decision_path'])
         behaviour_path = os.path.join(dsd_path, dsd_data['relative_dsd_path'])
 
         # Initialize dsd instance
-        dsd = DsdFollower(dsd_data['debug_topic'])
+        dsd = DsdFollower(self._node, dsd_data['debug_topic'])
         dsd.register_actions(actions_path)
         dsd.register_decisions(decisions_path)
         dsd.load_behavior(behaviour_path)
         dsd.initialized = True
 
         self.dsd = dsd
+
+def main():
+    plugin = 'dynamic_stack_decider_visualization.dsd_visualization_plugin.DsdVizPlugin'
+    main = Main(filename=plugin)
+    sys.exit(main.main(standalone=plugin))
+
+
+if __name__ == '__main__':
+    main()
