@@ -68,7 +68,7 @@ def discover_elements(path):
     return elements
 
 
-class DSD(Node):
+class DSD:
     """
     One decision is defined as the root decision, the starting point.
     Each decision element, which is pushed on the stack, is immediately executed until no further element is pushed.

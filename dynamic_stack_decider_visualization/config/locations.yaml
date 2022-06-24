@@ -3,24 +3,24 @@ locations:
   - display_name: Body Behavior
     package: bitbots_body_behavior
     debug_topic: debug/dsd/body_behavior
-    relative_action_path: src/bitbots_body_behavior/actions
-    relative_decision_path: src/bitbots_body_behavior/decisions
-    relative_dsd_path: src/bitbots_body_behavior/main.dsd
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: main.dsd
   - display_name: Head Behavior
     package: bitbots_head_behavior
     debug_topic: debug/dsd/head_behavior
-    relative_action_path: src/bitbots_head_behavior/actions
-    relative_decision_path: src/bitbots_head_behavior/decisions
-    relative_dsd_path: src/bitbots_head_behavior/head_behavior.dsd
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: head_behavior.dsd
   - display_name: HCM
     package: bitbots_hcm
     debug_topic: debug/dsd/hcm
-    relative_action_path: src/bitbots_hcm/hcm_dsd/actions
-    relative_decision_path: src/bitbots_hcm/hcm_dsd/decisions
-    relative_dsd_path: src/bitbots_hcm/hcm_dsd/hcm.dsd
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: hcm.dsd
   - display_name: Localization
     package: bitbots_localization
     debug_topic: debug/dsd/localization
-    relative_action_path: src/bitbots_localization/localization_dsd/actions
-    relative_decision_path: src/bitbots_localization/localization_dsd/decisions
-    relative_dsd_path: src/bitbots_localization/localization_dsd/localization.dsd
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: localization.dsd

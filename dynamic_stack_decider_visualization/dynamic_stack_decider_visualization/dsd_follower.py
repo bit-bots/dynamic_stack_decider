@@ -1,7 +1,7 @@
 import json
 import uuid
 import pydot
-import rospy
+import rclpy
 from std_msgs.msg import String
 from python_qt_binding.QtGui import QStandardItemModel, QStandardItem
 from dynamic_stack_decider.dsd import DSD
@@ -14,10 +14,11 @@ class ParseException(Exception):
 
 class DsdFollower(DSD):
 
-    def __init__(self, debug_topic):
+    def __init__(self, node, debug_topic):
         super().__init__(None)
+        self._node = node
 
-        self.debug_subscriber = rospy.Subscriber(debug_topic, String, self.subscriber_callback, queue_size=10)
+        self.debug_subscriber = self._node.create_subscription(String, debug_topic, self.subscriber_callback, 10)
         self._cached_msg = None
         self._cached_dotgraph = None
         self._cached_item_model = None
@@ -96,8 +97,6 @@ class DsdFollower(DSD):
     def _error_dotgraph():
         dot = pydot.Dot(graph_type='digraph')
 
-        param_debug_active = rospy.get_param("/debug_active", False)
-
         uid1 = str(uuid.uuid4())
         dot.add_node(pydot.Node(uid1, label="I have not received anything from the dsd yet"))
 
@@ -105,7 +104,7 @@ class DsdFollower(DSD):
         dot.add_node(pydot.Node(uid2, label="Please make sure that\n"
                                             "- The appropriate dsd is started\n"
                                             "- You are connected to the same roscore\n"
-                                            "- param /debug_active is True (for me it is {})".format(param_debug_active)))
+                                            "- param /debug_active is True"))
 
         dot.add_edge(pydot.Edge(uid1, uid2))
 

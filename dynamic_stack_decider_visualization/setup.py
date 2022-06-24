@@ -1,12 +1,25 @@
-#!/usr/bin/env python
+from setuptools import find_packages
+from setuptools import setup
+import glob
 
-from distutils.core import setup
-from catkin_pkg.python_setup import generate_distutils_setup
+package_name = 'dynamic_stack_decider_visualization'
 
-d = generate_distutils_setup(
-    packages=['dynamic_stack_decider_visualization'],
-    package_dir={'': 'src'},
-    scripts=['scripts/dsd_visualization']
+setup(
+    name=package_name,
+    packages=find_packages(),
+    data_files=[
+        ('share/' + package_name + '/resource',
+            ['resource/StackmachineViz.ui']),
+        ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['plugin.xml']),
+        ('share/' + package_name + "/config",
+            glob.glob('config/*.yaml')),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    entry_points={
+        'console_scripts': [
+            'dsd_gui = ' + package_name + '.dsd_visualization_plugin:main',
+        ],
+    },
 )
-
-setup(**d)
