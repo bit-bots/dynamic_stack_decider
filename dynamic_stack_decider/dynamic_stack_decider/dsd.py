@@ -18,7 +18,7 @@ from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElem
     SequenceTreeElement
 
 from dynamic_stack_decider.logger import get_logger
-from dynamic_stack_decider.parser import parse as parse_dsd
+from dynamic_stack_decider.parser import DsdParser
 
 def discover_elements(path):
     """
@@ -101,6 +101,7 @@ class DSD:
         """
 
         self.blackboard = blackboard
+        self.node = node
 
         self.tree = None  # type: Optional[Tree]
         # The stack is implemented as a list of tuples consisting of the tree element
@@ -137,7 +138,8 @@ class DSD:
         :param path: The path to the .dsd file describing the behaviour
         :return:
         """
-        self.tree = parse_dsd(path)
+        parser = DsdParser(self.node)
+        self.tree = parser.parse(path)
         self._bind_modules(self.tree.root_element)
         self.set_start_element(self.tree.root_element)
 
@@ -198,49 +200,53 @@ class DSD:
         :param: reevaluate: Can be set to False to avoid the reevaluation
         :type reevaluate: bool
         """
-        self.publish_debug_msg()
+        try:
+            self.publish_debug_msg()
 
-        if reevaluate and not self.do_not_reevaluate:
-            self.stack_exec_index = 0
-            self.stack_reevaluate = True
-            for tree_element, instance in self.stack[:-1]:
-                # check all elements except the top one, but not the actions
-                if isinstance(instance, AbstractDecisionElement) and instance.get_reevaluate():
-                    result = instance.perform(True)
-                    # Check whether this result would be an ELSE case
-                    result_is_else = result not in tree_element.children.keys()
-                    # Push element if necessary. Necessary means that the result is unequal to the activation reason of
-                    # the next element in the stack, i.e. the decision has changed. However we have to account for ELSE!
-                    if result_is_else and self.stack[self.stack_exec_index + 1][0].activation_reason == 'ELSE':
-                        # In this case the result returned by the decision does not match any of its possible results,
-                        # therefore it goes in the 'ELSE' category. If the activation reason is 'ELSE', the decision did
-                        # not change, that means no change in the stack is necessary.
-                        pass
-                    elif result != self.stack[self.stack_exec_index + 1][0].activation_reason:
-                        # In this case, however, the activation reason actually did change. Therefore, we have to
-                        # discard everything in the stack above the current decision and push the new result.
-                        self.stack = self.stack[0:self.stack_exec_index + 1]
-                        self.stack_reevaluate = False
-                        self.push(tree_element.get_child(result))
+            if reevaluate and not self.do_not_reevaluate:
+                self.stack_exec_index = 0
+                self.stack_reevaluate = True
+                for tree_element, instance in self.stack[:-1]:
+                    # check all elements except the top one, but not the actions
+                    if isinstance(instance, AbstractDecisionElement) and instance.get_reevaluate():
+                        result = instance.perform(True)
+                        # Check whether this result would be an ELSE case
+                        result_is_else = result not in tree_element.children.keys()
+                        # Push element if necessary. Necessary means that the result is unequal to the activation reason of
+                        # the next element in the stack, i.e. the decision has changed. However we have to account for ELSE!
+                        if result_is_else and self.stack[self.stack_exec_index + 1][0].activation_reason == 'ELSE':
+                            # In this case the result returned by the decision does not match any of its possible results,
+                            # therefore it goes in the 'ELSE' category. If the activation reason is 'ELSE', the decision did
+                            # not change, that means no change in the stack is necessary.
+                            pass
+                        elif result != self.stack[self.stack_exec_index + 1][0].activation_reason:
+                            # In this case, however, the activation reason actually did change. Therefore, we have to
+                            # discard everything in the stack above the current decision and push the new result.
+                            self.stack = self.stack[0:self.stack_exec_index + 1]
+                            self.stack_reevaluate = False
+                            self.push(tree_element.get_child(result))
 
-                    if not self.stack_reevaluate:
-                        # We had some external interrupt, we stop here
-                        return
-                self.stack_exec_index += 1
-            self.stack_reevaluate = False
-        # Get the top module
-        current_tree_element, current_instance = self.stack[-1]
-        if reevaluate:
-            # reset flag
-            self.do_not_reevaluate = False
-        if (isinstance(current_instance, AbstractActionElement) and current_instance.never_reevaluate or
-                isinstance(current_instance, SequenceElement) and current_instance.current_action.never_reevaluate):
-            # Deactivate reevaluation if action had never_reevaluate flag
-            self.set_do_not_reevaluate()
-        # Run the top module
-        result = current_instance.perform()
-        if isinstance(current_instance, AbstractDecisionElement):
-            self.push(current_tree_element.get_child(result))
+                        if not self.stack_reevaluate:
+                            # We had some external interrupt, we stop here
+                            return
+                    self.stack_exec_index += 1
+                self.stack_reevaluate = False
+            # Get the top module
+            current_tree_element, current_instance = self.stack[-1]
+            if reevaluate:
+                # reset flag
+                self.do_not_reevaluate = False
+            if (isinstance(current_instance, AbstractActionElement) and current_instance.never_reevaluate or
+                    isinstance(current_instance, SequenceElement) and current_instance.current_action.never_reevaluate):
+                # Deactivate reevaluation if action had never_reevaluate flag
+                self.set_do_not_reevaluate()
+            # Run the top module
+            result = current_instance.perform()
+            if isinstance(current_instance, AbstractDecisionElement):
+                self.push(current_tree_element.get_child(result))
+        except Exception as e:
+            import traceback
+            traceback.print_stack()
 
     def push(self, element):
         """
