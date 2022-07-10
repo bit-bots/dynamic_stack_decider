@@ -246,7 +246,7 @@ class DSD:
                 self.push(current_tree_element.get_child(result))
         except Exception as e:
             import traceback
-            traceback.print_stack()
+            traceback.print_exc()
 
     def push(self, element):
         """
