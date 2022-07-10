@@ -19,7 +19,7 @@ locations:
     relative_decision_path: decisions
     relative_dsd_path: hcm.dsd
   - display_name: Localization
-    package: bitbots_localization
+    package: bitbots_localization_handler
     debug_topic: debug/dsd/localization
     relative_action_path: actions
     relative_decision_path: decisions
