@@ -59,7 +59,7 @@ class DsdVizPlugin(Plugin):
     def __init__(self, context):
         super(DsdVizPlugin, self).__init__(context)
         self._node = context.node
-
+        print("######################################: ", context.node)
         self._initialized = False  # This gets set to true once the plugin hast completely finished loading
 
         # Ensure startup state
@@ -259,6 +259,7 @@ class DsdVizPlugin(Plugin):
 
         # Initialize dsd instance
         dsd = DsdFollower(self._node, dsd_data['debug_topic'])
+        print("############## self.node: ", self._node)
         dsd.register_actions(actions_path)
         dsd.register_decisions(decisions_path)
         dsd.load_behavior(behaviour_path)
