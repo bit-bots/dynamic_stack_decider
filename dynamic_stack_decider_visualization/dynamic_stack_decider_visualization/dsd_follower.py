@@ -50,7 +50,7 @@ class DsdFollower(DSD):
         pass
 
     def close(self):
-        self.debug_subscriber.unregister()
+        self.debug_subscriber.destroy()
 
     def _parse_remote_data(self, remaining_data, parent_element=None):
         """
