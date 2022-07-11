@@ -59,7 +59,6 @@ class DsdVizPlugin(Plugin):
     def __init__(self, context):
         super(DsdVizPlugin, self).__init__(context)
         self._node = context.node
-
         self._initialized = False  # This gets set to true once the plugin hast completely finished loading
 
         # Ensure startup state

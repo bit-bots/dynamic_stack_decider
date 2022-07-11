@@ -69,7 +69,7 @@ class DsdParser:
                         next_is_start = True
                         current_subtree = tree
                         last_indent = indent
-                        continue
+                        continue    
 
                     if next_is_start:
                         # This line contains the root element of the main tree

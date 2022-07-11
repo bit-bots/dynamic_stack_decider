@@ -6,7 +6,20 @@ from std_msgs.msg import String
 from python_qt_binding.QtGui import QStandardItemModel, QStandardItem
 from dynamic_stack_decider.dsd import DSD
 from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement, SequenceTreeElement
+from dynamic_stack_decider.parser import DsdParser
 
+class FakeParameter():
+    value = None
+
+class FakeNode():
+    def __init__(self, logger):
+        self.logger = logger
+
+    def get_parameter(self, name: str) -> FakeParameter:
+        return FakeParameter()
+
+    def get_logger(self):
+        return self.logger
 
 class ParseException(Exception):
     pass
@@ -15,7 +28,7 @@ class ParseException(Exception):
 class DsdFollower(DSD):
 
     def __init__(self, node, debug_topic):
-        super().__init__(None)
+        super().__init__(None, node=node)
         self._node = node
 
         self.debug_subscriber = self._node.create_subscription(String, debug_topic, self.subscriber_callback, 10)
@@ -37,7 +50,7 @@ class DsdFollower(DSD):
         pass
 
     def close(self):
-        self.debug_subscriber.unregister()
+        self.debug_subscriber.destroy()
 
     def _parse_remote_data(self, remaining_data, parent_element=None):
         """
@@ -285,3 +298,15 @@ class DsdFollower(DSD):
 
         self._cached_item_model = model
         return self._cached_item_model
+
+    def load_behavior(self, path):
+        """
+        Load a .dsd file into the behaviour to execute it. This should be called after the actions
+        and decisions have been loaded.
+        :param path: The path to the .dsd file describing the behaviour
+        :return:
+        """
+        parser = DsdParser(FakeNode(self._node.get_logger()))
+        self.tree = parser.parse(path)
+        self._bind_modules(self.tree.root_element)
+        self.set_start_element(self.tree.root_element)
