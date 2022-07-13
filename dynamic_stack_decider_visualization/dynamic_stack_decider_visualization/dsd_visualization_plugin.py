@@ -51,7 +51,7 @@ from rqt_gui.main import Main
 def parse_locations_yaml():
     path = os.path.join(get_package_share_directory('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
     with open(path, 'r') as f:
-        return yaml.load(f)['locations']
+        return yaml.safe_load(f)['locations']
 
 
 class DsdVizPlugin(Plugin):
