@@ -18,6 +18,7 @@ setup(
     zip_safe=True,
     keywords=['ROS'],
     license='MIT',
+    scripts=['scripts/dsd_parser.py'],
     entry_points={
         #  'console_scripts': [
             #  'dynamic_stack_decider = dynamic_stack_decider.parser:parse',
