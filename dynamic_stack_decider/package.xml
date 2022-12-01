@@ -17,11 +17,13 @@
 
   <license>MIT</license>
 
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
 
   <depend>rclpy</depend>
   <depend>bitbots_docs</depend>
+
+  <exec_depend>bitbots_blackboard</exec_depend>
+
   <test_depend>python3-coverage</test_depend>
 
   <export>
