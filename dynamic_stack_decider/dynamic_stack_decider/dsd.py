@@ -1,10 +1,11 @@
 import importlib
 import inspect
+import traceback
 import json
 import sys
 import pkgutil
+from typing import Dict, List, Optional, Tuple
 
-import rclpy
 from rclpy.node import Node
 from pathlib import Path
 from std_msgs.msg import String
@@ -20,14 +21,12 @@ from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElem
 from dynamic_stack_decider.logger import get_logger
 from dynamic_stack_decider.parser import DsdParser
 
-def discover_elements(path):
+def discover_elements(path: str) -> Dict[str, AbstractStackElement]:
     """
     Extract all the classes from the files in the given path and return a dictionary containing them
 
     :param path: The absolute path containing the files that should be registered
-    :type path: str
     :return: A dictionary with class names as keys and classes as values
-    :rtype: Dict[str, AbstractStackElement]
     :raises ValueError: if path is not an existing directory or file
     """
     elements = {}
@@ -93,23 +92,22 @@ class DSD:
     do_not_reevaluate = False
     old_representation = ""
 
-    def __init__(self, blackboard, debug_topic=None, node=None):
+    def __init__(self, blackboard, debug_topic: str = None, node: Optional[Node] = None):
         """
         :param blackboard: Blackboard instance which will be available to all modules
         :param debug_topic:  Topic on which debug data should be published
-        :type debug_topic: str
         """
 
         self.blackboard = blackboard
         self.node = node
 
-        self.tree = None  # type: Optional[Tree]
+        self.tree: Optional[Tree] = None
         # The stack is implemented as a list of tuples consisting of the tree element
         # and the actual module instance
-        self.stack = []  # type: List[Tuple[AbstractTreeElement, AbstractStackElement]]
+        self.stack: List[Tuple[AbstractTreeElement, AbstractStackElement]] = []
 
-        self.actions = {}  # type: Dict[str, AbstractActionElement]
-        self.decisions = {}  # type: Dict[str, AbstractDecisionElement]
+        self.actions: Dict[str, AbstractActionElement] = {}
+        self.decisions: Dict[str, AbstractDecisionElement] = {}
 
         # Setup debug publisher if needed
         self.debug_active = debug_topic is not None
@@ -192,13 +190,12 @@ class DSD:
             self.stack_reevaluate = False
         self.stack = [(self.start_element, self._init_element(self.start_element))]
 
-    def update(self, reevaluate=True):
+    def update(self, reevaluate: bool = True):
         """
         Calls the element which is currently on top of the stack.
         Before doing this, all preconditions are checked (all decision elements where reevaluate is true).
 
         :param: reevaluate: Can be set to False to avoid the reevaluation
-        :type reevaluate: bool
         """
         try:
             self.publish_debug_msg()
@@ -245,17 +242,16 @@ class DSD:
             if isinstance(current_instance, AbstractDecisionElement):
                 self.push(current_tree_element.get_child(result))
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            get_logger().error(str(traceback.format_exc()))
 
-    def push(self, element):
+
+    def push(self, element: AbstractTreeElement):
         """
         Put a new element on the stack and start it directly.
 
         This should only be called by the DSD, not from any of the modules
 
         :param element: The tree element that should be put on top of the stack.
-        :type element: AbstractTreeElement
         """
         self.stack.append((element, self._init_element(element)))
 
