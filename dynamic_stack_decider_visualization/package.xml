@@ -16,13 +16,13 @@
   <exec_depend version_gte="0.2.19">python_qt_binding</exec_depend>
   <exec_depend>python_qt_binding</exec_depend>
   <exec_depend>qt_dotgraph</exec_depend>
-  <exec_depend>rosgraph</exec_depend>
   <exec_depend>rosgraph_msgs</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>rqt_gui</exec_depend>
   <exec_depend>rqt_gui_py</exec_depend>
-  <exec_depend>rqt_gui_common</exec_depend>
   <exec_depend>dynamic_stack_decider</exec_depend>
+  <depend>python3-yaml</depend>
+  <depend>python3-pydot</depend>
 
   <doc_depend>bitbots_docs</doc_depend>
 

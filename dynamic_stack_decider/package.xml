@@ -22,6 +22,7 @@
 
   <depend>rclpy</depend>
   <depend>bitbots_docs</depend>
+  <depend>python3-yaml</depend>
   <test_depend>python3-coverage</test_depend>
 
   <export>
