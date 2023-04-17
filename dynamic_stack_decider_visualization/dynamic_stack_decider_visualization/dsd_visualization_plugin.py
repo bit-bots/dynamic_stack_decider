@@ -31,6 +31,7 @@ from __future__ import print_function
 
 import os
 import uuid
+import sys
 
 import pydot
 import yaml
@@ -48,6 +49,8 @@ from .interactive_graphics_view import InteractiveGraphicsView
 from ament_index_python import get_package_share_directory
 from rqt_gui.main import Main
 
+from rclpy.node import Node
+
 def parse_locations_yaml():
     path = os.path.join(get_package_share_directory('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
     with open(path, 'r') as f:
@@ -58,7 +61,7 @@ class DsdVizPlugin(Plugin):
 
     def __init__(self, context):
         super(DsdVizPlugin, self).__init__(context)
-        self._node = context.node
+        self._node: Node = context.node
         self._initialized = False  # This gets set to true once the plugin hast completely finished loading
 
         # Ensure startup state
@@ -236,7 +239,7 @@ class DsdVizPlugin(Plugin):
         """
         # close debug connection of old dsd
         if self.dsd is not None:
-            self.dsd.close()
+            self.dsd = None
 
         if name == 'Select DSD...':
             self.dsd = None
