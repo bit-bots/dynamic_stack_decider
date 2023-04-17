@@ -190,43 +190,47 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="9,0">
-     <property name="spacing">
-      <number>2</number>
-     </property>
-     <item>
-      <widget class="InteractiveGraphicsView" name="graphics_view">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="renderHints">
-        <set>QPainter::Antialiasing|QPainter::HighQualityAntialiasing|QPainter::SmoothPixmapTransform|QPainter::TextAntialiasing</set>
-       </property>
-       <property name="resizeAnchor">
-        <enum>QGraphicsView::AnchorViewCenter</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QTreeView" name="stack_prop_tree_view">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-         <horstretch>8</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-    </layout>
+<layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing">
+        <number>2</number>
+    </property>
+    <item>
+        <widget class="QSplitter" name="splitter">
+            <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+            </property>
+            <widget class="InteractiveGraphicsView" name="graphics_view">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                        <horstretch>3</horstretch>
+                        <verstretch>0</verstretch>
+                    </sizepolicy>
+                </property>
+                <property name="renderHints">
+                    <set>QPainter::Antialiasing|QPainter::HighQualityAntialiasing|QPainter::SmoothPixmapTransform|QPainter::TextAntialiasing</set>
+                </property>
+                <property name="resizeAnchor">
+                    <enum>QGraphicsView::AnchorViewCenter</enum>
+                </property>
+            </widget>
+            <widget class="QTreeView" name="stack_prop_tree_view">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                        <horstretch>1</horstretch>
+                        <verstretch>0</verstretch>
+                    </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                    <size>
+                        <width>0</width>
+                        <height>0</height>
+                    </size>
+                </property>
+            </widget>
+        </widget>
+    </item>
+</layout>
+
    </item>
   </layout>
  </widget>
