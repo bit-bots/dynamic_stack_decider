@@ -35,6 +35,11 @@ def discover_elements(path: str) -> Dict[str, AbstractStackElement]:
 
     def discover_module_elements(module_name):
         try:
+            if sys.modules.get(module_name, False):
+                # reload the module if it is already imported,
+                # because we might load a different dsd and the module is
+                # always e.g. names 'actions' and therefore not reloaded with the new dsd
+                importlib.reload(sys.modules[module_name])
             module = importlib.import_module(module_name)
             # add all classes which are defined directly in the target module (not imported)
             elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
