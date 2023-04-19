@@ -49,9 +49,6 @@ class DsdFollower(DSD):
         """
         pass
 
-    def close(self):
-        self.debug_subscriber.destroy()
-
     def _parse_remote_data(self, remaining_data, parent_element=None):
         """
         Recursively parse the remaining part of a remote DSDs state description message
