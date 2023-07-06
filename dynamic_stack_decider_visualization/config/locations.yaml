@@ -6,6 +6,60 @@ locations:
     relative_action_path: actions
     relative_decision_path: decisions
     relative_dsd_path: main.dsd
+  - display_name: Nuc1 Body Behavior
+    package: bitbots_body_behavior
+    debug_topic: nuc1/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: main.dsd
+  - display_name: Nuc2 Body Behavior
+    package: bitbots_body_behavior
+    debug_topic: nuc2/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: main.dsd
+  - display_name: Nuc3 Body Behavior
+    package: bitbots_body_behavior
+    debug_topic: nuc3/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: main.dsd
+  - display_name: Nuc4 Body Behavior
+    package: bitbots_body_behavior
+    debug_topic: nuc4/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: main.dsd
+  - display_name: Body Behavior (Minimal)
+    package: bitbots_body_behavior
+    debug_topic: debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: minimal.dsd
+  - display_name: Nuc1 Body Behavior (Minimal)
+    package: bitbots_body_behavior
+    debug_topic: nuc1/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: minimal.dsd
+  - display_name: Nuc2 Body Behavior (Minimal)
+    package: bitbots_body_behavior
+    debug_topic: nuc2/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: minimal.dsd
+  - display_name: Nuc3 Body Behavior (Minimal)
+    package: bitbots_body_behavior
+    debug_topic: nuc3/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: minimal.dsd
+  - display_name: Nuc4 Body Behavior (Minimal)
+    package: bitbots_body_behavior
+    debug_topic: nuc4/debug/dsd/body_behavior
+    relative_action_path: actions
+    relative_decision_path: decisions
+    relative_dsd_path: minimal.dsd
   - display_name: HCM
     package: bitbots_hcm
     debug_topic: debug/dsd/hcm
