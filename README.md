@@ -173,9 +173,8 @@ If you want to use a graphical user interface to define your DSD, we recommend [
 ## Examples
 
 Here are a few projects that use the DSD and can be used for reference:
-* The [Bit-Bots Head Behavior](https://github.com/bit-bots/bitbots_behavior/tree/master/bitbots_head_behavior/src/bitbots_head_behavior)
-* The [Bit-Bots Body Behavior](https://github.com/bit-bots/bitbots_behavior/tree/master/bitbots_body_behavior/src/bitbots_body_behavior)
-* The [Bit-Bots Humanoid Control Module](https://github.com/bit-bots/bitbots_motion/tree/master/bitbots_hcm/src/bitbots_hcm/hcm_dsd)
+* The [Bit-Bots Body Behavior](https://github.com/bit-bots/bitbots_behavior/tree/master/bitbots_body_behavior/bitbots_body_behavior)
+* The [Bit-Bots Humanoid Control Module](https://github.com/bit-bots/bitbots_motion/tree/master/bitbots_hcm/bitbots_hcm/hcm_dsd)
 * The [Parser Test](https://github.com/bit-bots/dynamic_stack_decider/tree/master/dynamic_stack_decider/tests) in this repository
 
 ## The Paper
