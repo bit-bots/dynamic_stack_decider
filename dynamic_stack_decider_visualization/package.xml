@@ -23,10 +23,11 @@
   <exec_depend>rqt_gui</exec_depend>
   <exec_depend>rqt_gui_py</exec_depend>
   <exec_depend>dynamic_stack_decider</exec_depend>
+
+  <depend>bitbots_docs</depend>
   <depend>python3-yaml</depend>
   <depend>python3-pydot</depend>
 
-  <doc_depend>bitbots_docs</doc_depend>
 
   <export>
     <architecture_independent/>
