@@ -1,18 +1,16 @@
 import copy
 import re
-from dynamic_stack_decider.tree import Tree, AbstractTreeElement, DecisionTreeElement, ActionTreeElement, \
-    SequenceTreeElement
+from dynamic_stack_decider.tree import Tree, DecisionTreeElement, ActionTreeElement, SequenceTreeElement
 import yaml
-import rclpy
 from rclpy.node import Node
-from typing import List, Union
+from typing import Optional
 
 
 class DsdParser:
-    def __init__(self, node):
+    def __init__(self, node: Optional[Node] = None):
         self.node = node
 
-    def parse(self, file_path):
+    def parse(self, file_path: str) -> Tree:
         """
         Parse a .dsd file to a Tree
 
@@ -202,7 +200,7 @@ class DsdParser:
                                  'Did you forget a comma?'.format(lnr))
 
             if parameter_value.startswith('%'):
-                parameter_value = self.node.get_parameter(parameter_value[1:]).value
+                parameter_value = self.node.get_parameter(parameter_value[1:]).value if self.node is not None else None
                 parameter_dict[parameter_key] = parameter_value
             elif parameter_value.startswith('*'):
                 # This is a reference to the value specified in the subtree
