@@ -14,13 +14,9 @@ setup(
     install_requires=[
         'setuptools',
     ],
-    test_suite='tests',
+    tests_require=['pytest'],
     zip_safe=True,
     keywords=['ROS'],
     license='MIT',
-    entry_points={
-        #  'console_scripts': [
-            #  'dynamic_stack_decider = dynamic_stack_decider.parser:parse',
-        #  ],
-    }
+    entry_points={}
 )
