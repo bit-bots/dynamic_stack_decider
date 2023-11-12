@@ -170,6 +170,9 @@ More information can be added to the right side by calling `self.publish_debug_d
 ## DSD Development GUI
 If you want to use a graphical user interface to define your DSD, we recommend [this repository](https://github.com/bit-bots/dsd-gui)
 
+## VSCode Extension
+If you use VSCode, you can use the [DSD extension](https://marketplace.visualstudio.com/items?itemName=Mastermori.dsd) which provides syntax highlighting.
+
 ## Examples
 
 Here are a few projects that use the DSD and can be used for reference:
