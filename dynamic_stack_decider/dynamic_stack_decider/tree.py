@@ -6,15 +6,14 @@ class Tree:
 
     def __init__(self):
         # The root element of the tree
-        self.root_element = None
+        self.root_element: Optional[AbstractTreeElement] = None
         self.parameter_list = []
 
-    def set_root_element(self, element):
+    def set_root_element(self, element: "AbstractTreeElement"):
         """
         Set the root element of the tree
 
         :param element: The root element
-        :type element: AbstractTreeElement
         """
         self.root_element = element
 
@@ -28,15 +27,14 @@ class AbstractTreeElement:
     use one of DecisionTreeElement and ActionTreeElement instead
     """
 
-    def __init__(self, name, parent):
+    def __init__(self, name: str, parent: Optional["AbstractTreeElement"]):
         self.name = name
         self.parent = parent
         self.module = None
         self.parameters = None
         self.activation_reason = None
 
-    def get_child(self, activating_result):
-        # type: (str) -> Optional[AbstractTreeElement]
+    def get_child(self, activating_result: str) -> Optional["AbstractTreeElement"]:
         """
         Get the child that should be activated for the given result.
         This makes only sense for DecisionTreeElements; others return None
@@ -70,14 +68,14 @@ class DecisionTreeElement(AbstractTreeElement):
         self.unset_parameters = unset_parameters or dict()
 
         # Dictionary that maps results of the decision to the corresponding child
-        self.children = dict()
+        self.children: dict[str, AbstractTreeElement] = dict()
 
-    def add_child_element(self, element, activating_result):
+    def add_child_element(self, element: AbstractTreeElement, activating_result: str):
         """Add a child that will be executed when activating_result is returned"""
         self.children[activating_result] = element
         element.set_activation_reason(activating_result)
 
-    def get_child(self, activating_result):
+    def get_child(self, activating_result: str) -> Optional[AbstractTreeElement]:
         """Get the child for a given result"""
         if not activating_result:
             # give advice about error

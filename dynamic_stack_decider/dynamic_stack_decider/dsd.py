@@ -153,8 +153,10 @@ class DSD:
         :param element: The starting element
         """
         if isinstance(element, ActionTreeElement):
+            assert element.name in self.actions, f'Provided element "{element.name}" was not found in registered actions!'
             element.module = self.actions[element.name]
         elif isinstance(element, DecisionTreeElement):
+            assert element.name in self.decisions, f'Provided element "{element.name}" was not found in registered decisions!'
             element.module = self.decisions[element.name]
             for child in element.children.values():
                 self._bind_modules(child)
@@ -162,7 +164,7 @@ class DSD:
             for action in element.action_elements:
                 self._bind_modules(action)
         else:
-            raise KeyError('Provided element ' + str(element) + 'was not found in registered actions or decisions')
+            raise ValueError(f'Unknown parser tree element type "{type(element)}" for element "{element}"!')
 
     def _init_element(self, element):
         """ Initialises the module belonging to the given element. """
