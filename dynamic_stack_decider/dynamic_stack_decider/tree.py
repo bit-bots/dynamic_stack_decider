@@ -34,8 +34,7 @@ class AbstractTreeElement:
         self.parameters = None
         self.activation_reason = None
 
-    def get_child(self, activating_result):
-        # type: (str) -> Optional[AbstractTreeElement]
+    def get_child(self, activating_result: str) -> Optional["AbstractTreeElement"]:
         """
         Get the child that should be activated for the given result.
         This makes only sense for DecisionTreeElements; others return None
@@ -69,14 +68,14 @@ class DecisionTreeElement(AbstractTreeElement):
         self.unset_parameters = unset_parameters or dict()
 
         # Dictionary that maps results of the decision to the corresponding child
-        self.children: dict[AbstractTreeElement] = dict()
+        self.children: dict[str, AbstractTreeElement] = dict()
 
-    def add_child_element(self, element, activating_result):
+    def add_child_element(self, element: AbstractTreeElement, activating_result: str):
         """Add a child that will be executed when activating_result is returned"""
         self.children[activating_result] = element
         element.set_activation_reason(activating_result)
 
-    def get_child(self, activating_result):
+    def get_child(self, activating_result: str) -> Optional[AbstractTreeElement]:
         """Get the child for a given result"""
         if not activating_result:
             # give advice about error
