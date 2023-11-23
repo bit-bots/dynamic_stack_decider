@@ -1,8 +1,9 @@
 import sys
-from typing import List, Optional
+from typing import Optional
+
 
 class Tree:
-    """ A tree defining a behaviour, parsed from a .dsd file """
+    """A tree defining a behaviour, parsed from a .dsd file"""
 
     def __init__(self):
         # The root element of the tree
@@ -45,7 +46,7 @@ class AbstractTreeElement:
         return None
 
     def set_activation_reason(self, reason):
-        """ Set the result that activated this element """
+        """Set the result that activated this element"""
         self.activation_reason = reason
 
 
@@ -63,7 +64,7 @@ class DecisionTreeElement(AbstractTreeElement):
         :param parent: the parent element, None for the root element
         :type parent: DecisionTreeElement
         """
-        super(DecisionTreeElement, self).__init__(name, parent)
+        super().__init__(name, parent)
         self.parameters = parameters or dict()
         self.unset_parameters = unset_parameters or dict()
 
@@ -89,9 +90,9 @@ class DecisionTreeElement(AbstractTreeElement):
             raise KeyError(f"{activating_result} does not lead to a child of {str(self)} and no ELSE was specified")
 
     def __repr__(self):
-        r = '$' + self.name + ' ({}): '.format(self.parameters)
+        r = "$" + self.name + f" ({self.parameters}): "
         for result, child in self.children.items():
-            r += result + ': {' + repr(child) + '} '
+            r += result + ": {" + repr(child) + "} "
         return r
 
     def __str__(self):
@@ -106,7 +107,7 @@ class SequenceTreeElement(AbstractTreeElement):
     """
 
     def __init__(self, parent):
-        super(SequenceTreeElement, self).__init__(None, parent)
+        super().__init__(None, parent)
         self.action_elements = list()  # type: List[ActionTreeElement]
 
     def add_action_element(self, action_element):
@@ -125,7 +126,7 @@ class SequenceTreeElement(AbstractTreeElement):
             action.set_activation_reason(reason)
 
     def __repr__(self):
-        return '({})'.format(', '.join(repr(action) for action in self.action_elements))
+        return "({})".format(", ".join(repr(action) for action in self.action_elements))
 
 
 class ActionTreeElement(AbstractTreeElement):
@@ -143,13 +144,13 @@ class ActionTreeElement(AbstractTreeElement):
         :param parameters: A dictionary of parameters
         :param unset_parameters: A dictionary of parameters that must be set later
         """
-        super(ActionTreeElement, self).__init__(name, parent)
+        super().__init__(name, parent)
         self.parameters = parameters or dict()
         self.unset_parameters = unset_parameters or dict()
         self.in_sequence = False
 
     def __repr__(self):
-        return '@{} ({})'.format(self.name, self.parameters)
+        return f"@{self.name} ({self.parameters})"
 
     def __str__(self):
         return self.name

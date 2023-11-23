@@ -27,40 +27,38 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-from __future__ import print_function
 
 import os
-import uuid
 import sys
+import uuid
 
 import pydot
 import yaml
-from .dsd_follower import DsdFollower
+from ament_index_python import get_package_share_directory
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Qt
 from python_qt_binding.QtGui import QIcon, QPainter, QStandardItemModel
+from python_qt_binding.QtSvg import QSvgGenerator
 from python_qt_binding.QtWidgets import QFileDialog, QGraphicsScene, QWidget
 from qt_dotgraph.dot_to_qt import DotToQtGenerator
 from qt_dotgraph.pydotfactory import PydotFactory
+from rclpy.node import Node
+from rqt_gui.main import Main
 from rqt_gui_py.plugin import Plugin
 
+from .dsd_follower import DsdFollower
 from .interactive_graphics_view import InteractiveGraphicsView
 
-from ament_index_python import get_package_share_directory
-from rqt_gui.main import Main
-
-from rclpy.node import Node
 
 def parse_locations_yaml():
-    path = os.path.join(get_package_share_directory('dynamic_stack_decider_visualization'), 'config', 'locations.yaml')
-    with open(path, 'r') as f:
-        return yaml.safe_load(f)['locations']
+    path = os.path.join(get_package_share_directory("dynamic_stack_decider_visualization"), "config", "locations.yaml")
+    with open(path) as f:
+        return yaml.safe_load(f)["locations"]
 
 
 class DsdVizPlugin(Plugin):
-
     def __init__(self, context):
-        super(DsdVizPlugin, self).__init__(context)
+        super().__init__(context)
         self._node: Node = context.node
         self._initialized = False  # This gets set to true once the plugin hast completely finished loading
 
@@ -81,7 +79,9 @@ class DsdVizPlugin(Plugin):
         self._widget.setObjectName(self.objectName())
 
         # load qt ui definition from file
-        ui_file = os.path.join(get_package_share_directory("dynamic_stack_decider_visualization"), "resource", "StackmachineViz.ui")
+        ui_file = os.path.join(
+            get_package_share_directory("dynamic_stack_decider_visualization"), "resource", "StackmachineViz.ui"
+        )
         loadUi(ui_file, self._widget, {"InteractiveGraphicsView": InteractiveGraphicsView})
 
         # initialize qt scene
@@ -90,7 +90,7 @@ class DsdVizPlugin(Plugin):
         self._widget.graphics_view.setScene(self._scene)
 
         # Bind fit-in-view button
-        self._widget.fit_in_view_push_button.setIcon(QIcon.fromTheme('zoom-original'))
+        self._widget.fit_in_view_push_button.setIcon(QIcon.fromTheme("zoom-original"))
         self._widget.fit_in_view_push_button.pressed.connect(self.fit_in_view)
 
         # Fit-in-view on checkbox toggle
@@ -109,7 +109,7 @@ class DsdVizPlugin(Plugin):
         # Fill choices for dsd_selector and bind on_select
         self._widget.dsd_selector_combo_box.addItem("Select DSD...")
         for choice in self.locations:
-            self._widget.dsd_selector_combo_box.addItem(choice['display_name'])
+            self._widget.dsd_selector_combo_box.addItem(choice["display_name"])
         self._widget.dsd_selector_combo_box.currentTextChanged.connect(self.set_dsd)
 
         context.add_widget(self._widget)
@@ -118,26 +118,30 @@ class DsdVizPlugin(Plugin):
         self._timer_id = self.startTimer(100)
 
     def save_settings(self, plugin_settings, instance_settings):
-        super(DsdVizPlugin, self).save_settings(plugin_settings, instance_settings)
+        super().save_settings(plugin_settings, instance_settings)
 
-        instance_settings.set_value('auto_fit_graph_check_box_state', self._widget.auto_fit_graph_check_box.isChecked())
-        instance_settings.set_value('highlight_connections_check_box_state',
-                                    self._widget.highlight_connections_check_box.isChecked())
+        instance_settings.set_value("auto_fit_graph_check_box_state", self._widget.auto_fit_graph_check_box.isChecked())
+        instance_settings.set_value(
+            "highlight_connections_check_box_state", self._widget.highlight_connections_check_box.isChecked()
+        )
 
     def restore_settings(self, plugin_settings, instance_settings):
-        super(DsdVizPlugin, self).restore_settings(plugin_settings, instance_settings)
+        super().restore_settings(plugin_settings, instance_settings)
 
         self._widget.auto_fit_graph_check_box.setChecked(
-            instance_settings.value('auto_fit_graph_check_box_state', True) in [True, 'true'])
+            instance_settings.value("auto_fit_graph_check_box_state", True) in [True, "true"]
+        )
         self._widget.highlight_connections_check_box.setChecked(
-            instance_settings.value('highlight_connections_check_box_state', True) in [True, 'true'])
+            instance_settings.value("highlight_connections_check_box_state", True) in [True, "true"]
+        )
 
         self._initialized = True
         self.refresh()
 
     def save_svg_to_file(self):
-        file_name, _ = QFileDialog.getSaveFileName(self._widget, self.tr("Save as SVG"), "stackmachine.svg",
-                                                   self.tr("Scalable Vector Graphic (*.svg)"))
+        file_name, _ = QFileDialog.getSaveFileName(
+            self._widget, self.tr("Save as SVG"), "stackmachine.svg", self.tr("Scalable Vector Graphic (*.svg)")
+        )
 
         if file_name is not None and file_name != "":
             generator = QSvgGenerator()
@@ -149,7 +153,7 @@ class DsdVizPlugin(Plugin):
             self._scene.render(painter)
             painter.end()
 
-    def timerEvent(self, timer_event):
+    def timer_event(self, timer_event):
         """This gets called by QT whenever the timer ticks"""
 
         if not self.freeze:
@@ -173,7 +177,7 @@ class DsdVizPlugin(Plugin):
 
         else:
             self._render_dotgraph(self.dsd.to_dotgraph())
-            self._render_debug_data(self.dsd.to_QItemModel())
+            self._render_debug_data(self.dsd.to_q_item_model())
 
     def _render_messages(self, *messages):
         """Render simple messages on the canvas"""
@@ -208,8 +212,7 @@ class DsdVizPlugin(Plugin):
 
         # Generate qt items from dotcode
         dotcode = PydotFactory().create_dot(dotgraph)
-        nodes, edges = DotToQtGenerator().dotcode_to_qt_items(dotcode, highlight_level,
-                                                              same_label_siblings=False)
+        nodes, edges = DotToQtGenerator().dotcode_to_qt_items(dotcode, highlight_level, same_label_siblings=False)
 
         # Add generated items to scene
         for node_item in nodes:
@@ -241,26 +244,26 @@ class DsdVizPlugin(Plugin):
         if self.dsd is not None:
             self.dsd = None
 
-        if name == 'Select DSD...':
+        if name == "Select DSD...":
             self.dsd = None
             return
 
         # Search for dsd_data in locations.yaml
         for i in self.locations:
-            if i['display_name'] == name:
+            if i["display_name"] == name:
                 dsd_data = i
                 break
         else:
-            raise ValueError('no dsd with name {} found'.format(name))
+            raise ValueError(f"no dsd with name {name} found")
 
         # Figure out full paths
-        dsd_path = get_package_share_directory(dsd_data['package'])
-        actions_path = os.path.join(dsd_path, dsd_data['relative_action_path'])
-        decisions_path = os.path.join(dsd_path, dsd_data['relative_decision_path'])
-        behaviour_path = os.path.join(dsd_path, dsd_data['relative_dsd_path'])
+        dsd_path = get_package_share_directory(dsd_data["package"])
+        actions_path = os.path.join(dsd_path, dsd_data["relative_action_path"])
+        decisions_path = os.path.join(dsd_path, dsd_data["relative_decision_path"])
+        behaviour_path = os.path.join(dsd_path, dsd_data["relative_dsd_path"])
 
         # Initialize dsd instance
-        dsd = DsdFollower(self._node, dsd_data['debug_topic'])
+        dsd = DsdFollower(self._node, dsd_data["debug_topic"])
         dsd.register_actions(actions_path)
         dsd.register_decisions(decisions_path)
         dsd.load_behavior(behaviour_path)
@@ -268,11 +271,12 @@ class DsdVizPlugin(Plugin):
 
         self.dsd = dsd
 
+
 def main():
-    plugin = 'dynamic_stack_decider_visualization.dsd_visualization_plugin.DsdVizPlugin'
+    plugin = "dynamic_stack_decider_visualization.dsd_visualization_plugin.DsdVizPlugin"
     main = Main(filename=plugin)
     sys.exit(main.main(standalone=plugin))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

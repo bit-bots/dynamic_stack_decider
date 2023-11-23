@@ -1,25 +1,29 @@
 import importlib
 import inspect
-import traceback
 import json
-import sys
 import pkgutil
+import sys
+import traceback
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from rclpy.node import Node
-from pathlib import Path
 from std_msgs.msg import String
-from typing import Dict, List, Tuple, Optional
 
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
-from dynamic_stack_decider.sequence_element import SequenceElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
-from dynamic_stack_decider.tree import Tree, AbstractTreeElement, ActionTreeElement, DecisionTreeElement, \
-    SequenceTreeElement
-
 from dynamic_stack_decider.logger import get_logger
 from dynamic_stack_decider.parser import DsdParser
+from dynamic_stack_decider.sequence_element import SequenceElement
+from dynamic_stack_decider.tree import (
+    AbstractTreeElement,
+    ActionTreeElement,
+    DecisionTreeElement,
+    SequenceTreeElement,
+    Tree,
+)
+
 
 def discover_elements(path: str) -> Dict[str, AbstractStackElement]:
     """
@@ -42,9 +46,16 @@ def discover_elements(path: str) -> Dict[str, AbstractStackElement]:
                 importlib.reload(sys.modules[module_name])
             module = importlib.import_module(module_name)
             # add all classes which are defined directly in the target module (not imported)
-            elements.update(inspect.getmembers(module, lambda m: inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)))
+            elements.update(
+                inspect.getmembers(
+                    module,
+                    lambda m: inspect.isclass(m)
+                    and inspect.getmodule(m) == module
+                    and issubclass(m, AbstractStackElement),
+                )
+            )
         except Exception as e:
-            get_logger().error('Error while loading class {}: {}'.format(module_name, e))
+            get_logger().error(f"Error while loading class {module_name}: {e}")
 
     if path.is_file():
         # update PYTHONPATH so that path is importable as a module
@@ -64,7 +75,7 @@ def discover_elements(path: str) -> Dict[str, AbstractStackElement]:
             discover_module_elements(module_name)
 
     else:
-        raise ValueError('Path {} is not a directory or file'.format(path))
+        raise ValueError(f"Path {path} is not a directory or file")
 
     # restore original PYTHONPATH so that everything stays consistent
     sys.path = original_pythonpath
@@ -117,7 +128,7 @@ class DSD:
         # Setup debug publisher if needed
         self.debug_active = debug_topic is not None
         if self.debug_active and node is not None:
-            get_logger().debug('Debugging is active. Publishing on {}'.format(debug_topic))
+            get_logger().debug(f"Debugging is active. Publishing on {debug_topic}")
             self.debug_publisher = node.create_publisher(String, debug_topic, 10)
 
     def register_actions(self, module_path):
@@ -132,7 +143,9 @@ class DSD:
         Register every class in a given path as a decision
         :param module_path: A path containing files with classes extending AbstractDecisionElement
         """
-        self.decisions = {k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractDecisionElement)}
+        self.decisions = {
+            k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractDecisionElement)
+        }
 
     def load_behavior(self, path):
         """
@@ -153,10 +166,14 @@ class DSD:
         :param element: The starting element
         """
         if isinstance(element, ActionTreeElement):
-            assert element.name in self.actions, f'Provided element "{element.name}" was not found in registered actions!'
+            assert (
+                element.name in self.actions
+            ), f'Provided element "{element.name}" was not found in registered actions!'
             element.module = self.actions[element.name]
         elif isinstance(element, DecisionTreeElement):
-            assert element.name in self.decisions, f'Provided element "{element.name}" was not found in registered decisions!'
+            assert (
+                element.name in self.decisions
+            ), f'Provided element "{element.name}" was not found in registered decisions!'
             element.module = self.decisions[element.name]
             for child in element.children.values():
                 self._bind_modules(child)
@@ -167,7 +184,7 @@ class DSD:
             raise ValueError(f'Unknown parser tree element type "{type(element)}" for element "{element}"!')
 
     def _init_element(self, element):
-        """ Initialises the module belonging to the given element. """
+        """Initialises the module belonging to the given element."""
         if isinstance(element, SequenceTreeElement):
             initialized_actions = list()
             for action in element.action_elements:
@@ -218,7 +235,7 @@ class DSD:
                         result_is_else = result not in tree_element.children.keys()
                         # Push element if necessary. Necessary means that the result is unequal to the activation reason of
                         # the next element in the stack, i.e. the decision has changed. However we have to account for ELSE!
-                        if result_is_else and self.stack[self.stack_exec_index + 1][0].activation_reason == 'ELSE':
+                        if result_is_else and self.stack[self.stack_exec_index + 1][0].activation_reason == "ELSE":
                             # In this case the result returned by the decision does not match any of its possible results,
                             # therefore it goes in the 'ELSE' category. If the activation reason is 'ELSE', the decision did
                             # not change, that means no change in the stack is necessary.
@@ -226,7 +243,7 @@ class DSD:
                         elif result != self.stack[self.stack_exec_index + 1][0].activation_reason:
                             # In this case, however, the activation reason actually did change. Therefore, we have to
                             # discard everything in the stack above the current decision and push the new result.
-                            self.stack = self.stack[0:self.stack_exec_index + 1]
+                            self.stack = self.stack[0 : self.stack_exec_index + 1]
                             self.stack_reevaluate = False
                             self.push(tree_element.get_child(result))
 
@@ -240,17 +257,20 @@ class DSD:
             if reevaluate:
                 # reset flag
                 self.do_not_reevaluate = False
-            if (isinstance(current_instance, AbstractActionElement) and current_instance.never_reevaluate or
-                    isinstance(current_instance, SequenceElement) and current_instance.current_action.never_reevaluate):
+            if (
+                isinstance(current_instance, AbstractActionElement)
+                and current_instance.never_reevaluate
+                or isinstance(current_instance, SequenceElement)
+                and current_instance.current_action.never_reevaluate
+            ):
                 # Deactivate reevaluation if action had never_reevaluate flag
                 self.set_do_not_reevaluate()
             # Run the top module
             result = current_instance.perform()
             if isinstance(current_instance, AbstractDecisionElement):
                 self.push(current_tree_element.get_child(result))
-        except Exception as e:
+        except Exception:
             get_logger().error(str(traceback.format_exc()))
-
 
     def push(self, element: AbstractTreeElement):
         """
@@ -274,7 +294,7 @@ class DSD:
                 # we are currently reevaluating. we shorten the stack here
                 if self.stack_exec_index > 0:
                     # only shorten stack if it still has one element
-                    self.stack = self.stack[0:self.stack_exec_index]
+                    self.stack = self.stack[0 : self.stack_exec_index]
                 # stop reevaluating
                 self.stack_reevaluate = False
             else:
@@ -314,8 +334,8 @@ class DSD:
             data = None
             for tree_elem, elem_instance in reversed(self.stack):
                 elem_data = elem_instance.repr_dict()
-                elem_data['activation_reason'] = tree_elem.activation_reason
-                elem_data['next'] = data
+                elem_data["activation_reason"] = tree_elem.activation_reason
+                elem_data["next"] = data
                 data = elem_data
 
             msg = String(data=json.dumps(data))
