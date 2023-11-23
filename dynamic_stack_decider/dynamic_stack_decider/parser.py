@@ -1,9 +1,11 @@
 import copy
 import re
-from dynamic_stack_decider.tree import Tree, DecisionTreeElement, ActionTreeElement, SequenceTreeElement
+from typing import Optional
+
 import yaml
 from rclpy.node import Node
-from typing import Optional
+
+from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, SequenceTreeElement, Tree
 
 
 class DsdParser:
@@ -30,26 +32,26 @@ class DsdParser:
         comment = False
         last_indent = 0
         lnr = 0
-        with open(file_path, 'r') as bfile:
+        with open(file_path) as bfile:
             for line in bfile:
                 lnr += 1
                 comment = next_is_comment
 
-                line = re.sub(r'//\*\*.*?\*\*//', '', line)  # Block comments starting and ending in the same line
+                line = re.sub(r"//\*\*.*?\*\*//", "", line)  # Block comments starting and ending in the same line
 
-                if '**//' in line:
+                if "**//" in line:
                     # Block comments ending in this line
                     # This line as well as the following will contain valid code
                     next_is_comment = False
                     comment = False
-                    line = re.sub(r'.*\*\*//', '', line)
-                if '//**' in line:
+                    line = re.sub(r".*\*\*//", "", line)
+                if "//**" in line:
                     # Block comments starting in this line
                     # This line may contain valid code, the next ones won't
                     next_is_comment = True
-                    line = re.sub(r'//\*\*.*', '', line)
+                    line = re.sub(r"//\*\*.*", "", line)
 
-                line = re.sub(r'//.*', '', line)  # Line comments
+                line = re.sub(r"//.*", "", line)  # Line comments
 
                 line = line.rstrip()
                 if not line:
@@ -58,16 +60,16 @@ class DsdParser:
                 if not comment:
                     indent = len(line) - len(line.lstrip())
                     if indent % 4 != 0:
-                        raise ParseError('Error parsing line {}: Indent is not a multiple of 4'.format(lnr))
+                        raise ParseError(f"Error parsing line {lnr}: Indent is not a multiple of 4")
 
                     line_content = line.lstrip()
 
-                    if indent == 0 and line_content.startswith('-->'):
+                    if indent == 0 and line_content.startswith("-->"):
                         # This is the declaration of the start. Next line contains root element
                         next_is_start = True
                         current_subtree = tree
                         last_indent = indent
-                        continue    
+                        continue
 
                     if next_is_start:
                         # This line contains the root element of the main tree
@@ -76,11 +78,11 @@ class DsdParser:
                         tree.set_root_element(element)
                         current_tree_element = element
 
-                    if indent == 0 and line_content.startswith('#'):
+                    if indent == 0 and line_content.startswith("#"):
                         # This is the declaration of a new subtree
                         current_subtree = Tree()
                         name = line_content[1:]
-                        parameter_list = re.split(r'\s*\+\s*', name)
+                        parameter_list = re.split(r"\s*\+\s*", name)
                         name = parameter_list.pop(0)
                         current_subtree.parameter_list = parameter_list
                         subtrees[name] = current_subtree
@@ -93,23 +95,26 @@ class DsdParser:
                         for _ in range(indent, last_indent, 4):
                             current_tree_element = current_tree_element.parent
 
-                    if re.search(r'\s*-?->\s*', line_content):
+                    if re.search(r"\s*-?->\s*", line_content):
                         # Arrow in line, split in decision result and call
-                        result, call = re.split(r'\s*-?->\s*', line_content, 1)
+                        result, call = re.split(r"\s*-?->\s*", line_content, maxsplit=1)
 
-                        if call.startswith('#'):
+                        if call.startswith("#"):
                             # A subtree is called here.
-                            subtree_name = call.strip('#')
+                            subtree_name = call.strip("#")
                             name, parameters, unset_parameters = self._extract_parameters(subtree_name, lnr)
                             if name not in subtrees:
-                                raise ParseError('Error parsing line {}: {} not defined'.format(lnr, name))
+                                raise ParseError(f"Error parsing line {lnr}: {name} not defined")
                             subtree = subtrees[name]
                             if (set(parameters.keys()) | set(unset_parameters.keys())) != set(subtree.parameter_list):
-                                raise ParseError('Error parsing line {}: Invalid parameters specified.\n'
-                                                 'Available parameters are {}, specified parameters are {}.'
-                                                 .format(lnr,
-                                                         set(parameters.keys()) | set(unset_parameters.keys()),
-                                                         set(subtree.parameter_list)))
+                                raise ParseError(
+                                    "Error parsing line {}: Invalid parameters specified.\n"
+                                    "Available parameters are {}, specified parameters are {}.".format(
+                                        lnr,
+                                        set(parameters.keys()) | set(unset_parameters.keys()),
+                                        set(subtree.parameter_list),
+                                    )
+                                )
                             # The root element of the subtree should be placed in this tree position
                             if current_tree_element is None:
                                 # The current subtree is empty, set the subtree as its root element
@@ -134,24 +139,26 @@ class DsdParser:
                                         elif reference in unset_parameters:
                                             current.unset_parameters[name] = unset_parameters[reference]
                                         else:
-                                            raise ParseError('Error evaluating subtree call in line {}: '
-                                                             'Unknown reference to {}.'.format(lnr, reference))
+                                            raise ParseError(
+                                                f"Error evaluating subtree call in line {lnr}: "
+                                                f"Unknown reference to {reference}."
+                                            )
 
                                 # Append this subtree in the current position
                                 current_tree_element.add_child_element(subtree_copy, result)
 
-                        elif re.search(r'\s*,\s*', call):
+                        elif re.search(r"\s*,\s*", call):
                             # A sequence element
-                            actions = re.split(r'\s*,\s*', call)
+                            actions = re.split(r"\s*,\s*", call)
                             element = self._create_sequence_element(actions, current_tree_element, lnr)
                             current_tree_element.add_child_element(element, result)
 
-                        elif call.startswith('@'):
+                        elif call.startswith("@"):
                             # An action is called
                             element = self._create_tree_element(call, current_tree_element, lnr)
                             current_tree_element.add_child_element(element, result)
 
-                        elif call.startswith('$'):
+                        elif call.startswith("$"):
                             # A decision is called
                             element = self._create_tree_element(call, current_tree_element, lnr)
                             current_tree_element.add_child_element(element, result)
@@ -159,13 +166,13 @@ class DsdParser:
 
                         else:
                             raise ParseError(
-                                'Error parsing line {}: '
-                                'Element {} is neither an action nor a decision'.format(lnr, call))
+                                f"Error parsing line {lnr}: " f"Element {call} is neither an action nor a decision"
+                            )
 
                     else:
                         # No arrow, must be the beginning of a new subtree
-                        if re.search(r'\s*,\s*', line):
-                            actions = re.split(r'\s*,\s*', line)
+                        if re.search(r"\s*,\s*", line):
+                            actions = re.split(r"\s*,\s*", line)
                             element = self._create_sequence_element(actions, current_tree_element, lnr)
                         else:
                             element = self._create_tree_element(line_content, current_tree_element, lnr)
@@ -174,7 +181,6 @@ class DsdParser:
 
                     last_indent = indent
         return tree
-
 
     def _extract_parameters(self, token, lnr):
         """
@@ -185,31 +191,31 @@ class DsdParser:
         :type lnr: int
         :return: the name, a dict of set parameters, a dict of unset parameters
         """
-        parameters = re.split(r'\s*\+\s*', token)
+        parameters = re.split(r"\s*\+\s*", token)
         name = parameters.pop(0)
         parameter_dict = dict()
         unset_parameters = dict()
         for parameter in parameters:
             try:
-                parameter_key, parameter_value = parameter.split(':')
-            except ValueError:
-                raise ParseError('Error parsing line {}: Invalid parameter list'.format(lnr))
+                parameter_key, parameter_value = parameter.split(":")
+            except ValueError as e:
+                raise ParseError(f"Error parsing line {lnr}: Invalid parameter list") from e
 
-            if ' ' in parameter_value:
-                raise ParseError('Error parsing line {}: Parameter values should not contain spaces. '
-                                 'Did you forget a comma?'.format(lnr))
+            if " " in parameter_value:
+                raise ParseError(
+                    f"Error parsing line {lnr}: Parameter values should not contain spaces. " "Did you forget a comma?"
+                )
 
-            if parameter_value.startswith('%'):
+            if parameter_value.startswith("%"):
                 parameter_value = self.node.get_parameter(parameter_value[1:]).value if self.node is not None else None
                 parameter_dict[parameter_key] = parameter_value
-            elif parameter_value.startswith('*'):
+            elif parameter_value.startswith("*"):
                 # This is a reference to the value specified in the subtree
                 unset_parameters[parameter_key] = parameter_value[1:]
             else:
                 parameter_value = yaml.safe_load(parameter_value)  # universal interpretation of correct datatype
                 parameter_dict[parameter_key] = parameter_value
         return name, parameter_dict, unset_parameters
-
 
     def _create_tree_element(self, token, parent, lnr):
         """
@@ -223,14 +229,13 @@ class DsdParser:
         :return: a TreeElement containing the information given in token
         """
         name, parameter_dict, unset_parameters = self._extract_parameters(token[1:], lnr)
-        if token.startswith('$'):
+        if token.startswith("$"):
             element = DecisionTreeElement(name, parent, parameter_dict, unset_parameters)
-        elif token.startswith('@'):
+        elif token.startswith("@"):
             element = ActionTreeElement(name, parent, parameter_dict, unset_parameters)
         else:
-            raise ParseError('An element has to start with either $ or @')
+            raise ParseError("An element has to start with either $ or @")
         return element
-
 
     def _create_sequence_element(self, actions, parent, lnr):
         """
@@ -248,11 +253,12 @@ class DsdParser:
         for action in actions:
             element = self._create_tree_element(action, sequence_element, lnr)
             if not isinstance(element, ActionTreeElement):
-                raise ParseError('In a sequence, only actions are allowed!')
+                raise ParseError("In a sequence, only actions are allowed!")
             sequence_element.add_action_element(element)
         return sequence_element
 
 
 class ParseError(AssertionError):
     """An error during the DSD file parsing occurred"""
+
     pass

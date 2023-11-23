@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from typing import Union
 
 from dynamic_stack_decider.logger import get_logger
+
 
 class AbstractStackElement(metaclass=ABCMeta):
     """
@@ -10,6 +10,7 @@ class AbstractStackElement(metaclass=ABCMeta):
     The work of an element is done in the :func:`perform`.
     Each element which inherits from the AbstractStackElement can be used as a root element on the stack.
     """
+
     _dsd = None
     _init_data = None
 
@@ -68,10 +69,13 @@ class AbstractStackElement(metaclass=ABCMeta):
         :param data: data that should be displayed for debugging purposes
         """
         if type(data) not in (dict, list, int, float, str, bool):
-            get_logger().debug("The supplied debug data of type {} is not JSON serializable and will be wrapped in str()".format(type(data)), throttle_duration_sec=1)
+            get_logger().debug(
+                f"The supplied debug data of type {type(data)} is not JSON serializable and will be wrapped in str()",
+                throttle_duration_sec=1,
+            )
             data = str(data)
 
-        get_logger().debug('{}: {}'.format(label, data))
+        get_logger().debug(f"{label}: {data}")
         self._debug_data[label] = data
 
     def clear_debug_data(self):
@@ -84,9 +88,5 @@ class AbstractStackElement(metaclass=ABCMeta):
 
     def repr_dict(self):
         # type: () -> dict
-        """ Represent this stack element as dictionary which is JSON encodable """
-        return {
-            'type': 'abstract',
-            'classname': self.__class__.__name__,
-            'debug_data': self._debug_data
-        }
+        """Represent this stack element as dictionary which is JSON encodable"""
+        return {"type": "abstract", "classname": self.__class__.__name__, "debug_data": self._debug_data}

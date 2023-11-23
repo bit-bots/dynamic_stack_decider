@@ -1,5 +1,4 @@
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
-from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 
 
 class SequenceElement(AbstractStackElement):
@@ -15,7 +14,7 @@ class SequenceElement(AbstractStackElement):
         """
         :param actions: list of initialized action elements
         """
-        super(SequenceElement, self).__init__(blackboard, dsd)
+        super().__init__(blackboard, dsd)
         self.actions = actions
         self.current_action_index = 0
 
@@ -31,8 +30,9 @@ class SequenceElement(AbstractStackElement):
         """
         Pop a single element of the sequence
         """
-        assert not self.in_last_element(), ("It is not possible to pop a single element when"
-                                            "the last element of the sequence is active")
+        assert not self.in_last_element(), (
+            "It is not possible to pop a single element when" "the last element of the sequence is active"
+        )
         self.current_action_index += 1
 
     def in_last_element(self):
@@ -54,14 +54,14 @@ class SequenceElement(AbstractStackElement):
 
         :rtype: dict
         """
-        self.publish_debug_data('Active Element', self.current_action.__class__.__name__)
+        self.publish_debug_data("Active Element", self.current_action.__class__.__name__)
         if self.current_action._debug_data:
-            self.publish_debug_data('Corresponding debug data', self.current_action._debug_data)
+            self.publish_debug_data("Corresponding debug data", self.current_action._debug_data)
         data = {
-            'type': 'sequence',
-            'current_action_id': self.current_action_index,
-            'content': [elem.repr_dict() for elem in self.actions],
-            'debug_data': self._debug_data
+            "type": "sequence",
+            "current_action_id": self.current_action_index,
+            "content": [elem.repr_dict() for elem in self.actions],
+            "debug_data": self._debug_data,
         }
         self.clear_debug_data()
         return data

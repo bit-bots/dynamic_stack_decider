@@ -1,17 +1,20 @@
 import json
 import uuid
-import pydot
-import rclpy
-from std_msgs.msg import String
-from python_qt_binding.QtGui import QStandardItemModel, QStandardItem
-from dynamic_stack_decider.dsd import DSD
-from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement, SequenceTreeElement
-from dynamic_stack_decider.parser import DsdParser
 
-class FakeParameter():
+import pydot
+from python_qt_binding.QtGui import QStandardItem, QStandardItemModel
+from std_msgs.msg import String
+
+from dynamic_stack_decider.dsd import DSD
+from dynamic_stack_decider.parser import DsdParser
+from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, SequenceTreeElement
+
+
+class FakeParameter:
     value = None
 
-class FakeNode():
+
+class FakeNode:
     def __init__(self, logger):
         self.logger = logger
 
@@ -21,12 +24,12 @@ class FakeNode():
     def get_logger(self):
         return self.logger
 
-class ParseException(Exception):
+
+class ParseError(Exception):
     pass
 
 
 class DsdFollower(DSD):
-
     def __init__(self, node, debug_topic):
         super().__init__(None, node=node)
         self._node = node
@@ -60,29 +63,31 @@ class DsdFollower(DSD):
             # recursion exit
             return
 
-        if remaining_data['type'] == 'abstract':
-            raise ParseException('Remote DSD sent an abstract element in its stack')
+        if remaining_data["type"] == "abstract":
+            raise ParseError("Remote DSD sent an abstract element in its stack")
 
         if isinstance(parent_element, ActionTreeElement):
-            raise ParseException('The remote DSD sent further elements which seem to be on the stack'
-                                 'but the local DSD tree has already reached an ActionElement')
+            raise ParseError(
+                "The remote DSD sent further elements which seem to be on the stack"
+                "but the local DSD tree has already reached an ActionElement"
+            )
 
         if parent_element is None:
             # If no parent_element was given, then we are processing the root element
             self.set_start_element(self.tree.root_element)
-            self.tree.root_element.debug_data = remaining_data['debug_data']
+            self.tree.root_element.debug_data = remaining_data["debug_data"]
 
-            self._parse_remote_data(remaining_data['next'], self.tree.root_element)
+            self._parse_remote_data(remaining_data["next"], self.tree.root_element)
 
         else:
-            element = parent_element.get_child(remaining_data['activation_reason'])
-            element.debug_data = remaining_data['debug_data']
-            if remaining_data['type'] == 'sequence':
-                element.current_child = remaining_data['current_action_id']
+            element = parent_element.get_child(remaining_data["activation_reason"])
+            element.debug_data = remaining_data["debug_data"]
+            if remaining_data["type"] == "sequence":
+                element.current_child = remaining_data["current_action_id"]
                 self.push(element)
             else:
                 self.push(element)
-                self._parse_remote_data(remaining_data['next'], element)
+                self._parse_remote_data(remaining_data["next"], element)
 
     def subscriber_callback(self, msg):
         # abort if the dsd is not fully loaded yet
@@ -105,16 +110,21 @@ class DsdFollower(DSD):
 
     @staticmethod
     def _error_dotgraph():
-        dot = pydot.Dot(graph_type='digraph')
+        dot = pydot.Dot(graph_type="digraph")
 
         uid1 = str(uuid.uuid4())
         dot.add_node(pydot.Node(uid1, label="I have not received anything from the dsd yet"))
 
         uid2 = str(uuid.uuid4())
-        dot.add_node(pydot.Node(uid2, label="Please make sure that\n"
-                                            "- The appropriate dsd is started\n"
-                                            "- You are connected to the same roscore\n"
-                                            "- param /debug_active is True"))
+        dot.add_node(
+            pydot.Node(
+                uid2,
+                label="Please make sure that\n"
+                "- The appropriate dsd is started\n"
+                "- You are connected to the same roscore\n"
+                "- param /debug_active is True",
+            )
+        )
 
         dot.add_edge(pydot.Edge(uid1, uid2))
 
@@ -139,35 +149,35 @@ class DsdFollower(DSD):
             # type: (dict) -> str
             pstr = []
             for pkey, pval in params.items():
-                pstr.append(pkey + ': ' + str(pval))
-            pstr = ', '.join(pstr)
-            pstr = ' (' + pstr + ')'
+                pstr.append(pkey + ": " + str(pval))
+            pstr = ", ".join(pstr)
+            pstr = " (" + pstr + ")"
             return pstr
 
         if isinstance(element, SequenceTreeElement):
-            shape = 'box'
+            shape = "box"
 
-            label = ['Sequence:']
+            label = ["Sequence:"]
             for i, e in enumerate(element.action_elements):
                 # Spaces for indentation
-                action_label = '  '
+                action_label = "  "
                 # Mark current element (if this sequence is on the stack)
                 if active and i == element.current_child:
-                    action_label += '--> '
+                    action_label += "--> "
                 action_label += e.name
                 if e.parameters:
                     action_label += param_string(e.parameters)
                 label.append(action_label)
-            label = '\n'.join(label)
+            label = "\n".join(label)
 
         elif isinstance(element, DecisionTreeElement):
-            shape = 'ellipse'
+            shape = "ellipse"
             label = element.name
             if element.parameters:
                 label += param_string(element.parameters)
 
         else:
-            shape = 'box'
+            shape = "box"
             label = element.name
             if element.parameters:
                 label += param_string(element.parameters)
@@ -177,7 +187,7 @@ class DsdFollower(DSD):
         if active:
             return pydot.Node(uid, label=label, shape=shape)
         else:
-            return pydot.Node(uid, label=label, shape=shape, color='lightgray')
+            return pydot.Node(uid, label=label, shape=shape, color="lightgray")
 
     def _stack_to_dotgraph(self, stack, dot):
         """
@@ -194,7 +204,6 @@ class DsdFollower(DSD):
         # Also append all children which are on the stack to the graph
         if isinstance(element, DecisionTreeElement):
             for activating_result, child in element.children.items():
-
                 # Since this child is on the stack as well, it should be represented completely
                 if len(stack) > 1 and activating_result == stack[1][0].activation_reason:
                     dot, child_uid = self._stack_to_dotgraph(stack[1:], dot)
@@ -248,13 +257,13 @@ class DsdFollower(DSD):
         if self._cached_msg is None:
             return self._error_dotgraph()
 
-        dot = pydot.Dot(graph_type='digraph')
+        dot = pydot.Dot(graph_type="digraph")
         dot, uid = self._stack_to_dotgraph(self.stack, dot)
 
         self._cached_dotgraph = dot
         return dot
 
-    def to_QItemModel(self):
+    def to_q_item_model(self):
         """
         Represent the DSDs debug data as QITemModel
         """
@@ -274,7 +283,7 @@ class DsdFollower(DSD):
             elem_item.setEditable(False)
 
             if isinstance(elem, SequenceTreeElement):
-                elem_item.setText('Sequence: ' + ', '.join(str(e) for e in elem.action_elements))
+                elem_item.setText("Sequence: " + ", ".join(str(e) for e in elem.action_elements))
                 sequence = True
             else:
                 elem_item.setText(str(elem))

@@ -1,4 +1,5 @@
 from abc import ABCMeta
+
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 
@@ -12,6 +13,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     Actions do not push further elements on the stack but command actions on lower-level modules like new movement goals.
     If the action is complete, it can remove itself from the stack by performing a pop command.
     """
+
     def __init__(self, blackboard, dsd, parameters=None):
         """
         Constructor of the action element
@@ -22,7 +24,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         super().__init__(blackboard, dsd, parameters)
         # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
         if parameters is not None:
-            self.never_reevaluate = not parameters.get('r', True) or not parameters.get('reevaluate', True)
+            self.never_reevaluate = not parameters.get("r", True) or not parameters.get("reevaluate", True)
         else:
             self.never_reevaluate = False
 
@@ -39,8 +41,4 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
 
         :rtype: dict
         """
-        return {
-            'type': 'action',
-            'classname': self.__class__.__name__,
-            'debug_data': self._debug_data
-        }
+        return {"type": "action", "classname": self.__class__.__name__, "debug_data": self._debug_data}

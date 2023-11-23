@@ -7,29 +7,28 @@ import sys
 if __name__ == "__main__":
     try:
         b = sys.argv[1]
-    except IndexError:
-        raise AssertionError("Please Specify behavior")
+    except IndexError as e:
+        raise AssertionError("Please Specify behavior") from e
 
     decisions_out = collections.defaultdict(list)
-    for r, p, dfs in os.walk(os.path.join(b, "decisions")):
+    for r, _, dfs in os.walk(os.path.join(b, "decisions")):
         for df in dfs:
             fn = ""
-            with open(os.path.join(r, df), "r") as dp:
+            with open(os.path.join(r, df)) as dp:
                 for line in dp:
                     m = re.findall(r"(?<=class\s)[a-zA-Z0-9]*", line)
                     if m:
                         fn = m[0]
                         continue
                     if "_register" in line:
-                        l = dp.readline().replace("return", "").replace(" ", "")
+                        l = dp.readline().replace("return", "").replace(" ", "")  # noqa
                         print(l)
                         decisions_out[fn] = eval(l)
-
 
     actions_out = []
     for r, _, afs in os.walk(os.path.join(b, "actions")):
         for af in afs:
-            with open(os.path.join(r, af), "r") as dp:
+            with open(os.path.join(r, af)) as dp:
                 for line in dp:
                     m = re.findall(r"(?<=class\s)[a-zA-Z0-9]*", line)
                     if m:

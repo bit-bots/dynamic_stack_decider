@@ -28,18 +28,17 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import division
 
 from python_qt_binding.QtCore import QPointF, QRectF, Qt
 from python_qt_binding.QtGui import QTransform
 from python_qt_binding.QtWidgets import QGraphicsView
 
 
+# ruff: noqa: N802
 class InteractiveGraphicsView(QGraphicsView):
-
     def __init__(self, parent=None):
-        super(InteractiveGraphicsView, self).__init__(parent)
-        self.setObjectName('InteractiveGraphicsView')
+        super().__init__(parent)
+        self.setObjectName("InteractiveGraphicsView")
 
         self._last_pan_point = None
         self._last_scene_center = None
@@ -83,25 +82,25 @@ class InteractiveGraphicsView(QGraphicsView):
         else:
             QGraphicsView.wheelEvent(self, wheel_event)
 
-    def _map_to_scene_f(self, pointf):
-        point = pointf.toPoint()
-        if pointf.x() == point.x() and pointf.y() == point.y():
+    def _map_to_scene_f(self, point_f):
+        point = point_f.toPoint()
+        if point_f.x() == point.x() and point_f.y() == point.y():
             # map integer coordinates
             return self.mapToScene(point)
-        elif pointf.x() == point.x():
+        elif point_f.x() == point.x():
             # map integer x and decimal y coordinates
-            pointA = self.mapToScene((pointf + QPointF(0, -0.5)).toPoint())
-            pointB = self.mapToScene((pointf + QPointF(0, 0.5)).toPoint())
-            return (pointA + pointB) / 2.0
-        elif pointf.y() == point.y():
+            point_a = self.mapToScene((point_f + QPointF(0, -0.5)).toPoint())
+            point_b = self.mapToScene((point_f + QPointF(0, 0.5)).toPoint())
+            return (point_a + point_b) / 2.0
+        elif point_f.y() == point.y():
             # map decimal x  and integer y and coordinates
-            pointA = self.mapToScene((pointf + QPointF(-0.5, 0)).toPoint())
-            pointB = self.mapToScene((pointf + QPointF(0.5, 0)).toPoint())
-            return (pointA + pointB) / 2.0
+            point_a = self.mapToScene((point_f + QPointF(-0.5, 0)).toPoint())
+            point_b = self.mapToScene((point_f + QPointF(0.5, 0)).toPoint())
+            return (point_a + point_b) / 2.0
         else:
             # map decimal coordinates
-            pointA = self.mapToScene((pointf + QPointF(-0.5, -0.5)).toPoint())
-            pointB = self.mapToScene((pointf + QPointF(-0.5, 0.5)).toPoint())
-            pointC = self.mapToScene((pointf + QPointF(0.5, -0.5)).toPoint())
-            pointD = self.mapToScene((pointf + QPointF(0.5, 0.5)).toPoint())
-            return (pointA + pointB + pointC + pointD) / 4.0
+            point_a = self.mapToScene((point_f + QPointF(-0.5, -0.5)).toPoint())
+            point_b = self.mapToScene((point_f + QPointF(-0.5, 0.5)).toPoint())
+            point_c = self.mapToScene((point_f + QPointF(0.5, -0.5)).toPoint())
+            point_d = self.mapToScene((point_f + QPointF(0.5, 0.5)).toPoint())
+            return (point_a + point_b + point_c + point_d) / 4.0
