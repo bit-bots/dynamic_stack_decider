@@ -153,8 +153,10 @@ class DsdVizPlugin(Plugin):
             self._scene.render(painter)
             painter.end()
 
-    def timerEvent(self, timer_event): # fmt: skip
+    #fmt: off
+    def timerEvent(self, timer_event):
         """This gets called by QT whenever the timer ticks"""
+        #fmt: on
 
         if not self.freeze:
             self.refresh()
