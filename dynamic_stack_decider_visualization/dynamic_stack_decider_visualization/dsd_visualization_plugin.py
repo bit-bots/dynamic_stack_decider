@@ -153,7 +153,9 @@ class DsdVizPlugin(Plugin):
             self._scene.render(painter)
             painter.end()
 
-    def timer_event(self, timer_event):
+    # fmt: off
+    def timerEvent(self, timer_event): #noqa: N802
+        # fmt: on
         """This gets called by QT whenever the timer ticks"""
 
         if not self.freeze:
