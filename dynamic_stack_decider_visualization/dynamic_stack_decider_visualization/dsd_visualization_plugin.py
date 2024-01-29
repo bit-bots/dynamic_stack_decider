@@ -131,7 +131,6 @@ class DsdVizPlugin(Plugin):
         self._widget.graphics_view.wheelEvent = wheel_event
 
         # Add widget to the user interface
-
         context.add_widget(self._widget)
 
         # Start a timer that calls back every 100 ms
