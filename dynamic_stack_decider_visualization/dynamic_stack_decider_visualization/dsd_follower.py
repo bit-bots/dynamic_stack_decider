@@ -347,3 +347,11 @@ class DsdFollower:
             stack_element = stack_element["next"]
 
         return model
+
+    def destroy(self):
+        """
+        Cleanup the subscriptions, to we don't receive any more data that we don't need (performance)
+        Also this allows the garbage collector to delete this object and prevent memory leaks
+        """
+        self._node.destroy_subscription(self.tree_sub)
+        self._node.destroy_subscription(self.stack_sub)

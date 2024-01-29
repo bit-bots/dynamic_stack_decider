@@ -300,6 +300,10 @@ class DsdVizPlugin(Plugin):
         if name not in self.running_dsd_instances.keys():
             return
 
+        # Destroy the old dsd follower, so that we don't keep old subscriptions that take up resources
+        if self.dsd_follower is not None:
+            self.dsd_follower.destroy()
+
         # Initialize dsd follower
         self.dsd_follower = DsdFollower(self._node, self.running_dsd_instances[name])
 
