@@ -191,8 +191,8 @@ class DsdFollower:
         else:
             raise ParseError(f"Unknown element type {tree_element['type']}")
 
-        # Set color if this element is not on the stack
-        dot_node_params["color"] = "gray" if stack_element is None else "darkgreen"
+        # Set color if this element is on the stack
+        dot_node_params["color"] = "gray" if stack_element is None else "orangered"
 
         # Create node in graph
         return pydot.Node(**dot_node_params)
@@ -254,6 +254,7 @@ class DsdFollower:
                 child_item = QStandardItem()
                 child_item.setText(str(i) + ": ")
                 child_item.setEditable(False)
+                child_item.setSelectable(False)
                 self._append_debug_data_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif isinstance(debug_data, dict):
@@ -261,6 +262,7 @@ class DsdFollower:
                 child_item = QStandardItem()
                 child_item.setText(str(label) + ": ")
                 child_item.setEditable(False)
+                child_item.setSelectable(False)
                 self._append_debug_data_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif isinstance(debug_data, (bool, float, int, str, bytes)):
@@ -314,10 +316,13 @@ class DsdFollower:
             # Create a new item for this element
             elem_item = QStandardItem()
             elem_item.setEditable(False)
+            elem_item.setSelectable(False)
 
             # Set the text of the item
             if stack_element["type"] == "sequence":
+                # Get the names of all actions
                 action_names = [element["name"] for element in stack_element["content"]]
+                # Join them together and set the text
                 elem_item.setText("Sequence: " + ", ".join(action_names))
             else:
                 elem_item.setText(stack_element["name"])
@@ -329,8 +334,13 @@ class DsdFollower:
 
             # Add a spacer
             if not last_element:
+                # Create a new horizontal line covering the full with as a spacer of the stack elements
                 spacer = QStandardItem()
                 spacer.setEditable(False)
+                # Disable the selection of the spacer
+                spacer.setSelectable(False)
+                spacer.setText("──────────────────────────────")
+
                 model.invisibleRootItem().appendRow(spacer)
 
             # Go to next element

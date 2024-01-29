@@ -282,6 +282,7 @@ class DsdVizPlugin(Plugin):
             return
         else:
             self._prev_QItemModel = qitem_model
+            self._widget.stack_prop_tree_view.setHeaderHidden(True)
             self._widget.stack_prop_tree_view.setModel(qitem_model)
             self._widget.stack_prop_tree_view.expandAll()
 
