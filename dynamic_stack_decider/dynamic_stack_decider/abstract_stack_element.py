@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Union
 
 from dynamic_stack_decider.logger import get_logger
 
@@ -57,8 +58,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         self._dsd.interrupt()
 
-    def publish_debug_data(self, label, data):
-        # type: (str, Union[dict, list, int, float, str, bool])
+    def publish_debug_data(self, label: str, data: Union[dict, list, int, float, str, bool]):
         """
         Publish debug data. Can be viewed using the DSD visualization
 
@@ -86,7 +86,10 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         self._debug_data = {}
 
-    def repr_dict(self):
-        # type: () -> dict
+    def repr_dict(self) -> dict:
         """Represent this stack element as dictionary which is JSON encodable"""
-        return {"type": "abstract", "classname": self.__class__.__name__, "debug_data": self._debug_data}
+        return {
+            "type": "abstract",
+            "name": self.__class__.__name__,
+            "debug_data": self._debug_data
+        }

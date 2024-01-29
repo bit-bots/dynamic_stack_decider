@@ -31,6 +31,7 @@
 import os
 import sys
 import uuid
+from typing import Optional
 
 import pydot
 import yaml
@@ -50,11 +51,6 @@ from .dsd_follower import DsdFollower
 from .interactive_graphics_view import InteractiveGraphicsView
 
 
-def parse_locations_yaml():
-    path = os.path.join(get_package_share_directory("dynamic_stack_decider_visualization"), "config", "locations.yaml")
-    with open(path) as f:
-        return yaml.safe_load(f)["locations"]
-
 
 class DsdVizPlugin(Plugin):
     def __init__(self, context):
@@ -64,9 +60,12 @@ class DsdVizPlugin(Plugin):
 
         # Ensure startup state
         self.freeze = False  # Controls whether the state should be updated from remote
-        self.locations = parse_locations_yaml()
-        self.dsd = None  # type: DsdFollower
+        self.dsd_follower: Optional[DsdFollower] = None
+        self.running_dsd_instances: dict[str, str] = self.get_debug_topics_of_running_dsd_instances()
         self._init_plugin(context)
+
+        # Initialize dsd follower
+        self.dsd_follower = DsdFollower(self._node, self.running_dsd_instances["HCM"])
 
         # Performance optimization variables
         self._prev_dotgraph = None
@@ -108,14 +107,34 @@ class DsdVizPlugin(Plugin):
 
         # Fill choices for dsd_selector and bind on_select
         self._widget.dsd_selector_combo_box.addItem("Select DSD...")
-        for choice in self.locations:
-            self._widget.dsd_selector_combo_box.addItem(choice["display_name"])
+        for name in self.running_dsd_instances.keys():
+            self._widget.dsd_selector_combo_box.addItem(name)
         self._widget.dsd_selector_combo_box.currentTextChanged.connect(self.set_dsd)
 
         context.add_widget(self._widget)
 
         # Start a timer that calls back every 100 ms
         self._timer_id = self.startTimer(100)
+
+    def get_debug_topics_of_running_dsd_instances(self) -> dict[str, str]:
+        """
+        Get the debug topics of all running dsd instances
+
+        :return: A dict mapping the display_name of the dsd to its debug topic
+        """
+        # Store all DSDs in a dict
+        dsd_instances = {}
+
+        # List all known topics
+        topics = self._node.get_topic_names_and_types()
+        for topic_name, topic_types in topics:
+            if topic_name.startswith("/debug/dsd/") and topic_name.endswith("/dsd_tree"):
+                # Extract the dsd name from the topic name
+                dsd_name = topic_name.split("/")[3].upper()
+                # Store the dsd name and the debug topic namespace (not just the tree topic)
+                dsd_instances[dsd_name] = topic_name.replace("/dsd_tree", "")
+
+        return dsd_instances
 
     def save_settings(self, plugin_settings, instance_settings):
         super().save_settings(plugin_settings, instance_settings)
@@ -158,6 +177,10 @@ class DsdVizPlugin(Plugin):
         # fmt: on
         """This gets called by QT whenever the timer ticks"""
 
+        # Check if new dsd instances have been started
+        self.running_dsd_instances = self.get_debug_topics_of_running_dsd_instances()
+
+        # Refresh the viz if the freeze button is not pressed
         if not self.freeze:
             self.refresh()
 
@@ -166,20 +189,24 @@ class DsdVizPlugin(Plugin):
             self.fit_in_view()
 
     def fit_in_view(self):
+        """Rescales the tree to fit the window"""
         self._widget.graphics_view.fitInView(self._scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
     def refresh(self):
         """Refresh the complete drawn representation"""
 
+        # Show message if the plugin is not yet completely initialized
         if not self._initialized:
             self._render_messages("The plugin is not yet completely initialized. Please wait...")
 
-        elif self.dsd is None:
+        # Show message if no dsd is selected
+        elif self.dsd_follower is None:
             self._render_messages("No DSD selected")
 
         else:
-            self._render_dotgraph(self.dsd.to_dotgraph())
-            self._render_debug_data(self.dsd.to_q_item_model())
+            # Render the dotgraph and the debug data
+            self._render_dotgraph(self.dsd_follower.to_dotgraph())
+            self._render_debug_data(self.dsd_follower.to_q_item_model())
 
     def _render_messages(self, *messages):
         """Render simple messages on the canvas"""
@@ -242,36 +269,14 @@ class DsdVizPlugin(Plugin):
 
         :param name: display_name of any dsd in the locations.yaml
         """
-        # close debug connection of old dsd
-        if self.dsd is not None:
-            self.dsd = None
-
         if name == "Select DSD...":
-            self.dsd = None
+            self.dsd_follower = None
             return
 
-        # Search for dsd_data in locations.yaml
-        for i in self.locations:
-            if i["display_name"] == name:
-                dsd_data = i
-                break
-        else:
-            raise ValueError(f"no dsd with name {name} found")
+        # Check if the selected dsd is known
+        if name not in self.running_dsd_instances.keys():
+            raise ValueError(f"Unknown dsd {name}. Known DSDs are {self.running_dsd_instances.keys()}")
 
-        # Figure out full paths
-        dsd_path = get_package_share_directory(dsd_data["package"])
-        actions_path = os.path.join(dsd_path, dsd_data["relative_action_path"])
-        decisions_path = os.path.join(dsd_path, dsd_data["relative_decision_path"])
-        behaviour_path = os.path.join(dsd_path, dsd_data["relative_dsd_path"])
-
-        # Initialize dsd instance
-        dsd = DsdFollower(self._node, dsd_data["debug_topic"])
-        dsd.register_actions(actions_path)
-        dsd.register_decisions(decisions_path)
-        dsd.load_behavior(behaviour_path)
-        dsd.initialized = True
-
-        self.dsd = dsd
 
 
 def main():

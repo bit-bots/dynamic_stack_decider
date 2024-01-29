@@ -35,10 +35,12 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         """
         self._dsd.set_do_not_reevaluate()
 
-    def repr_dict(self):
+    def repr_dict(self) -> dict:
         """
         Represent this stack element as dictionary which is JSON encodable
-
-        :rtype: dict
         """
-        return {"type": "action", "classname": self.__class__.__name__, "debug_data": self._debug_data}
+        return {
+            "type": "action",
+            "name": self.__class__.__name__,
+            "debug_data": self._debug_data
+        }

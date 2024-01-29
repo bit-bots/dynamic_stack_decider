@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy
 from std_msgs.msg import String
 
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
@@ -125,11 +126,26 @@ class DSD:
         self.actions: Dict[str, AbstractActionElement] = {}
         self.decisions: Dict[str, AbstractDecisionElement] = {}
 
-        # Setup debug publisher if needed
+        # Check if debugging is active
         self.debug_active = debug_topic is not None
+
+        # Create debug publisher if necessary and possible
         if self.debug_active and node is not None:
-            get_logger().debug(f"Debugging is active. Publishing on {debug_topic}")
-            self.debug_publisher = node.create_publisher(String, debug_topic, 10)
+            get_logger().debug("Debugging is active")
+            # Create tree publisher
+            debug_tree_topic = f"{debug_topic}/dsd_tree"
+            # We use a latched publisher because the tree is only published once most of the time
+            latched_qos = QoSProfile(
+                depth=1,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL)
+            self.debug_tree_publisher = node.create_publisher(String, debug_tree_topic, latched_qos)
+            get_logger().debug(f"Debugging tree on '{debug_tree_topic}' (latched)")
+            # Create stack publisher
+            debug_stack_topic = f"{debug_topic}/dsd_stack"
+            self.debug_stack_publisher = node.create_publisher(String, debug_stack_topic, 10)
+            get_logger().debug(f"Debugging stack on '{debug_stack_topic}'")
+
+
 
     def register_actions(self, module_path):
         """
@@ -149,15 +165,16 @@ class DSD:
 
     def load_behavior(self, path):
         """
-        Load a .dsd file into the behaviour to execute it. This should be called after the actions
+        Load a .dsd file into the behavior to execute it. This should be called after the actions
         and decisions have been loaded.
-        :param path: The path to the .dsd file describing the behaviour
+        :param path: The path to the .dsd file describing the behavior
         :return:
         """
         parser = DsdParser(self.node)
         self.tree = parser.parse(path)
         self._bind_modules(self.tree.root_element)
         self.set_start_element(self.tree.root_element)
+        self.debug_publish_tree()
 
     def _bind_modules(self, element):
         """
@@ -184,7 +201,7 @@ class DSD:
             raise ValueError(f'Unknown parser tree element type "{type(element)}" for element "{element}"!')
 
     def _init_element(self, element):
-        """Initialises the module belonging to the given element."""
+        """Initializes the module belonging to the given element."""
         if isinstance(element, SequenceTreeElement):
             initialized_actions = list()
             for action in element.action_elements:
@@ -222,7 +239,7 @@ class DSD:
         :param: reevaluate: Can be set to False to avoid the reevaluation
         """
         try:
-            self.publish_debug_msg()
+            self.debug_publish_stack()
 
             if reevaluate and not self.do_not_reevaluate:
                 self.stack_exec_index = 0
@@ -324,12 +341,11 @@ class DSD:
         """
         return self.stack
 
-    def publish_debug_msg(self):
+    def debug_publish_stack(self):
         """
-        Helper method to publish debug data
+        Publishes a JSON representation of the current stack
         """
-
-        if self.debug_active and self.debug_publisher.get_subscription_count() != 0:
+        if self.debug_active and self.debug_stack_publisher.get_subscription_count() != 0:
             # Construct JSON encodable object which represents the current stack
             data = None
             for tree_elem, elem_instance in reversed(self.stack):
@@ -339,4 +355,14 @@ class DSD:
                 data = elem_data
 
             msg = String(data=json.dumps(data))
-            self.debug_publisher.publish(msg)
+            self.debug_stack_publisher.publish(msg)
+
+    def debug_publish_tree(self):
+        """
+        Publishes a JSON representation of the parsed tree
+        """
+        if self.debug_active:
+            # Construct JSON encodable object which represents the current stack
+            data = self.tree.repr_dict()
+            msg = String(data=json.dumps(data))
+            self.debug_tree_publisher.publish(msg)
