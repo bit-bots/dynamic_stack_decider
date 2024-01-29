@@ -216,9 +216,9 @@ class DsdFollower:
         """
         # Sanity check
         if stack_root is not None:
-            assert stack_root["type"] == subtree_root["type"], "The stack and the tree do not match"
+            assert stack_root["type"] == subtree_root["type"], "The stack root type and the tree root type do not match"
             if stack_root["type"] != "sequence":
-                assert stack_root["name"] == subtree_root["name"], "The stack and the tree do not match"
+                assert stack_root["name"] == subtree_root["name"], "The stack root name and the tree root name do not match"
 
         # Generate dot node for the root and mark it as active if it is on the stack
         dot_node = DsdFollower._dot_node_from_tree_element(subtree_root, stack_root)
@@ -355,8 +355,9 @@ class DsdFollower:
 
     def destroy(self):
         """
-        Cleanup the subscriptions, to we don't receive any more data that we don't need (performance)
-        Also this allows the garbage collector to delete this object and prevent memory leaks
+        Cleanup the subscriptions, so we don't receive any more data that we don't need.
+        This improves the performance.
+        Also this allows the garbage collector to delete this object and prevent memory leaks.
         """
         self._node.destroy_subscription(self.tree_sub)
         self._node.destroy_subscription(self.stack_sub)
