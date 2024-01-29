@@ -125,9 +125,9 @@ class DsdVizPlugin(Plugin):
         # List all known topics
         topics = self._node.get_topic_names_and_types()
         for topic_name, topic_types in topics:
-            if topic_name.startswith("/debug/dsd/") and topic_name.endswith("/dsd_tree"):
+            if topic_name.endswith("/dsd_tree"):
                 # Extract the dsd name from the topic name
-                dsd_name = topic_name.split("/")[3].upper()
+                dsd_name = topic_name.split("/")[-2].upper()
                 # Store the dsd name and the debug topic namespace (not just the tree topic)
                 dsd_instances[dsd_name] = topic_name.replace("/dsd_tree", "")
 
