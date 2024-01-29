@@ -24,19 +24,12 @@
   <exec_depend>rqt_gui_py</exec_depend>
   <exec_depend>dynamic_stack_decider</exec_depend>
 
-  <depend>bitbots_docs</depend>
-  <depend>python3-yaml</depend>
   <depend>python3-pydot</depend>
 
 
   <export>
     <architecture_independent/>
     <rqt_gui plugin="${prefix}/plugin.xml"/>
-    <bitbots_documentation>
-      <status>broken</status>
-      <language>python</language>
-    </bitbots_documentation>
     <build_type>ament_python</build_type>
   </export>
 </package>
-
