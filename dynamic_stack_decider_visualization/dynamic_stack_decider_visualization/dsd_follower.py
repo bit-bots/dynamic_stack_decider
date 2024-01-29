@@ -1,6 +1,6 @@
 import json
 import uuid
-from typing import Optional
+from typing import Optional, Union
 
 import pydot
 from python_qt_binding.QtGui import QStandardItem, QStandardItemModel
@@ -32,8 +32,7 @@ class DsdFollower:
         self.tree: Optional[dict] = None
         self.stack: Optional[dict] = None
 
-        self._cached_dotgraph = None
-        self._cached_item_model = None
+        self._cached_dotgraph: Optional[pydot.Dot] = None
 
         # Subscribe to the DSDs tree (latched)
         self.tree_sub = self._node.create_subscription(
@@ -68,18 +67,16 @@ class DsdFollower:
         # Deserialize the stack message
         stack = json.loads(msg.data)
 
-        # Abort if nothing changed
-        if not DsdFollower.stack_dict_changed(self.stack, stack):
-            return
+        # Check if the stack changed (ignore debug_data log messages)
+        if DsdFollower.stack_dict_changed(self.stack, stack, ignore_keys=["debug_data"]):
+            # Reset cache / trigger redraw
+            self._cached_dotgraph = None
 
+        # Update stack
         self.stack = stack
 
-        # Reset cache
-        self._cached_dotgraph = None
-        self._cached_item_model = None
-
     @staticmethod
-    def stack_dict_changed(old_stack_element, new_stack_element) -> bool:
+    def stack_dict_changed(old_stack_element, new_stack_element, ignore_keys) -> bool:
         """
         Check if two stack dicts are different
         """
@@ -90,15 +87,13 @@ class DsdFollower:
             if len(old_stack_element) != len(new_stack_element):
                 return True
 
-            ignore_keys = ["debug_data"]
-
             # Check if the content of the stack changed
             for key in old_stack_element.keys():
                 if key in ignore_keys:
                     continue
                 if key not in new_stack_element.keys():
                     return True
-                if DsdFollower.stack_dict_changed(old_stack_element[key], new_stack_element[key]):
+                if DsdFollower.stack_dict_changed(old_stack_element[key], new_stack_element[key], ignore_keys):
                     return True
         elif isinstance(old_stack_element, list):
             # Check if the length of the stack changed
@@ -106,7 +101,7 @@ class DsdFollower:
                 return True
             # Check if the content of the stack changed
             for i in range(len(old_stack_element)):
-                if DsdFollower.stack_dict_changed(old_stack_element[i], new_stack_element[i]):
+                if DsdFollower.stack_dict_changed(old_stack_element[i], new_stack_element[i], ignore_keys):
                     return True
         elif isinstance(old_stack_element, (int, float, str, bool)) or old_stack_element is None:
             if old_stack_element != new_stack_element:
@@ -168,6 +163,7 @@ class DsdFollower:
             assert stack_element["type"] == tree_element["type"], "The stack and the tree do not match"
             if stack_element["type"] != "sequence":
                 assert stack_element["name"] == tree_element["name"], "The stack and the tree do not match"
+
 
         # Initialize parameters of the dot node we are going to create
         dot_node_params = {
@@ -253,27 +249,26 @@ class DsdFollower:
                 dot.add_edge(edge)
         return dot, dot_node.get_name()
 
-    def _append_element_to_item(self, parent_item, debug_data):
+    def _append_debug_data_to_item(self, parent_item: QStandardItem, debug_data: Union[dict, list, int, float, str, bool]):
         """
         Append an elements debug_data to a QStandardItem.
 
         :type parent_item: python_qt_binding.QtGui.QStandardItem
         :type debug_data: dict or list or int or float or str or bool
-        :rtype: python_qt_binding.QtGui.QStandardItem
         """
         if isinstance(debug_data, list):
             for i, data in enumerate(debug_data):
                 child_item = QStandardItem()
                 child_item.setText(str(i) + ": ")
                 child_item.setEditable(False)
-                self._append_element_to_item(child_item, data)
+                self._append_debug_data_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif isinstance(debug_data, dict):
             for label, data in debug_data.items():
                 child_item = QStandardItem()
                 child_item.setText(str(label) + ": ")
                 child_item.setEditable(False)
-                self._append_element_to_item(child_item, data)
+                self._append_debug_data_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif isinstance(debug_data, (bool, float, int, str, bytes)):
             parent_item.setText(parent_item.text() + str(debug_data))
@@ -305,45 +300,46 @@ class DsdFollower:
         """
         Represent the DSDs debug data as QITemModel
         """
-        # Return cached result if available
-        if self._cached_item_model is not None:
-            return self._cached_item_model
-
         # Return if we received no data yet
         if self.stack is None or self.tree is None:
             return self._empty_item_model()
 
-        return self._empty_item_model() # TODO: Remove this line
-
         # Construct a new item-model
         model = QStandardItemModel()
 
-        """
-        for i in range(len(self.stack)):
-            elem, _ = self.stack[i]
+        # Start with the root/bottom of the stack
+        stack_element = self.stack
+
+        # Go through all stack elements
+        while stack_element is not None:
+            # Sanity check
+            assert "next" in stack_element, "Stack element has no next element"
+            # Check if this is the last element
+            last_element: bool = stack_element["next"] is None
+
+            # Create a new item for this element
             elem_item = QStandardItem()
             elem_item.setEditable(False)
 
-            if isinstance(elem, SequenceTreeElement):
-                elem_item.setText("Sequence: " + ", ".join(str(e) for e in elem.action_elements))
-                sequence = True
+            # Set the text of the item
+            if stack_element['type'] == "sequence":
+                action_names = [element["name"] for element in stack_element['content']]
+                elem_item.setText("Sequence: " + ", ".join(action_names))
             else:
-                elem_item.setText(str(elem))
-                sequence = False
+                elem_item.setText(stack_element["name"])
 
-            self._append_element_to_item(elem_item, elem.debug_data)
+            # Add debug data to the item
+            self._append_debug_data_to_item(elem_item, stack_element["debug_data"])
 
             model.invisibleRootItem().appendRow(elem_item)
 
-            # Add a spacer if this is not the last item
-            if elem != self.stack[-1][0]:
+            # Add a spacer
+            if not last_element:
                 spacer = QStandardItem()
                 spacer.setEditable(False)
                 model.invisibleRootItem().appendRow(spacer)
 
-            if sequence:
-                break
-        """
+            # Go to next element
+            stack_element = stack_element["next"]
 
-        self._cached_item_model = model
-        return self._cached_item_model
+        return model
