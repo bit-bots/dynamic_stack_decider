@@ -70,10 +70,14 @@ class DsdFollower:
         # Check if the stack changed (ignore debug_data log messages)
         if DsdFollower.stack_dict_changed(self.stack, stack, ignore_keys=["debug_data"]):
             # Reset cache / trigger redraw
-            self._cached_dotgraph = None
+            self.reset_cache()
 
         # Update stack
         self.stack = stack
+
+    def reset_cache(self):
+        """Reset the cached dotgraph"""
+        self._cached_dotgraph = None
 
     @staticmethod
     def stack_dict_changed(old_stack_element, new_stack_element, ignore_keys) -> bool:
@@ -195,15 +199,20 @@ class DsdFollower:
             raise ParseError(f"Unknown element type {tree_element['type']}")
 
         # Set color if this element is not on the stack
-        if stack_element is None:
-            dot_node_params["color"] = "lightgray"
+        dot_node_params["color"] = "gray" if stack_element is None else "darkgreen"
 
         # Create node in graph
         return pydot.Node(**dot_node_params)
 
-    def _stack_to_dotgraph(self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None) -> (pydot.Dot, str):
+    def _stack_to_dotgraph(self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None, full_tree: bool = False) -> (pydot.Dot, str):
         """
         Recursively modify dot to include every element of the stack
+
+        :param dot: The dotgraph to modify
+        :param subtree_root: The root node of the subtree which should be added to the graph
+        :param stack_root: The root node / bottom of the stack which should be added to the graph (this corresponds to subtree_root as they are different representations of the same component). The stack is optional as certain subtrees might not be in contact with the stack.
+        :param full_tree: If true the whole tree is rendered, otherwise only the current stack and its direct neighbors are rendered
+        :return: The modified dotgraph and the uid of the root node
         """
         # Sanity check
         if stack_root is not None:
@@ -216,9 +225,8 @@ class DsdFollower:
         # Append this element to graph
         dot.add_node(dot_node)
 
-        # Append all direct children to graph
-        # Also append all children which are on the stack to the graph
-        if "children" in subtree_root and stack_root is not None:
+        # Append children to graph if this element is on the stack or if we want to render the whole tree
+        if "children" in subtree_root and (stack_root is not None or full_tree):
             # Go through all children
             for activating_result, child in subtree_root["children"].items():
                 # Get the root of the sub stack if this branch the one which is currently on the stack
@@ -232,20 +240,14 @@ class DsdFollower:
                 dot, child_uid = self._stack_to_dotgraph(
                     dot,
                     child,
-                    sub_stack_root
+                    sub_stack_root,
+                    full_tree
                 )
                 # Connect the child to the parent element
-                edge_params = {
-                    "src": dot_node.get_name(),
-                    "dst": child_uid,
-                    "label": activating_result,
-                }
-                # Set color if this element is not on the stack
-                if sub_stack_root is None or True:
-                    edge_params["color"] = "blue"
-                    edge_params["fontcolor"] = "blue" # TODO fix color
-                # Build edge
-                edge = pydot.Edge(**edge_params)
+                edge = pydot.Edge(
+                    src=dot_node.get_name(),
+                    dst=child_uid,
+                    label=activating_result)
                 dot.add_edge(edge)
         return dot, dot_node.get_name()
 
@@ -273,9 +275,11 @@ class DsdFollower:
         elif isinstance(debug_data, (bool, float, int, str, bytes)):
             parent_item.setText(parent_item.text() + str(debug_data))
 
-    def to_dotgraph(self):
+    def to_dotgraph(self, full_tree: bool) -> pydot.Dot:
         """
         Represent the current stack as dotgraph
+
+        :param full_tree: If true the whole tree is rendered, otherwise only the current stack is rendered
         """
         # Return cached result if available
         if self._cached_dotgraph is not None:
@@ -292,7 +296,9 @@ class DsdFollower:
         self._cached_dotgraph, _ = self._stack_to_dotgraph(
             pydot.Dot(graph_type="digraph"),
             self.tree,
-            self.stack)
+            self.stack,
+            full_tree
+        )
 
         return self._cached_dotgraph
 

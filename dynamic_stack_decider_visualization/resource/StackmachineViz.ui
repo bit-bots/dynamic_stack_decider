@@ -33,6 +33,19 @@
       </widget>
      </item>
      <item>
+        <widget class="QCheckBox" name="show_full_tree">
+         <property name="toolTip">
+          <string>Show the full tree instead of the current stack and its direct neighbors</string>
+         </property>
+         <property name="text">
+          <string>Full Tree</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+     <item>
       <widget class="QCheckBox" name="auto_fit_graph_check_box">
        <property name="toolTip">
         <string>Automatically fit graph into view on update</string>

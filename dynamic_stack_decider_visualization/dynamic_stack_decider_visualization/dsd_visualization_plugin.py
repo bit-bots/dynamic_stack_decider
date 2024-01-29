@@ -112,6 +112,28 @@ class DsdVizPlugin(Plugin):
         self._widget.refresh_combobox_push_button.setIcon(QIcon.fromTheme("view-refresh"))
         self._widget.refresh_combobox_push_button.pressed.connect(self.discover_dsd_instances)
 
+        # Hook that resets the dot cache and thus forces a redraw of the dotgraph
+        def reset_dot_cache():
+            if self.dsd_follower is not None:
+                self.dsd_follower.reset_cache()
+
+        # Add hook that triggers redraw to ui elements
+        self._widget.highlight_connections_check_box.toggled.connect(reset_dot_cache)
+        self._widget.show_full_tree.toggled.connect(reset_dot_cache)
+        self._widget.auto_fit_graph_check_box.toggled.connect(reset_dot_cache)
+        self._widget.fit_in_view_push_button.pressed.connect(reset_dot_cache)
+        self._widget.freeze_push_button.toggled.connect(reset_dot_cache)
+
+        # Add to InteractiveGraphicsView mouse wheel event that disables auto-fit-in-view
+        def wheel_event(event):
+            self._widget.auto_fit_graph_check_box.setChecked(False)
+            self._widget.graphics_view.__class__.wheelEvent(self._widget.graphics_view, event)
+
+        # Call it as well as the original wheelEvent
+        self._widget.graphics_view.wheelEvent = wheel_event
+
+        # Add widget to the user interface
+
         context.add_widget(self._widget)
 
         # Start a timer that calls back every 100 ms
@@ -145,6 +167,7 @@ class DsdVizPlugin(Plugin):
 
         instance_settings.set_value("auto_fit_graph_check_box_state", self._widget.auto_fit_graph_check_box.isChecked())
         instance_settings.set_value("highlight_connections_check_box_state", self._widget.highlight_connections_check_box.isChecked())
+        instance_settings.set_value("show_full_tree_check_box_state", self._widget.show_full_tree.isChecked())
 
     def restore_settings(self, plugin_settings, instance_settings):
         super().restore_settings(plugin_settings, instance_settings)
@@ -154,6 +177,9 @@ class DsdVizPlugin(Plugin):
         )
         self._widget.highlight_connections_check_box.setChecked(
             instance_settings.value("highlight_connections_check_box_state", True) in [True, "true"]
+        )
+        self._widget.show_full_tree.setChecked(
+            instance_settings.value("show_full_tree_check_box_state", False) in [True, "true"]
         )
 
         self._initialized = True
@@ -178,7 +204,6 @@ class DsdVizPlugin(Plugin):
     def timerEvent(self, timer_event): #noqa: N802
         # fmt: on
         """This gets called by QT whenever the timer ticks"""
-
         # Refresh the viz if the freeze button is not pressed
         if not self.freeze:
             self.refresh()
@@ -204,7 +229,9 @@ class DsdVizPlugin(Plugin):
 
         else:
             # Render the dotgraph and the debug data
-            self._render_dotgraph(self.dsd_follower.to_dotgraph())
+            self._render_dotgraph(self.dsd_follower.to_dotgraph(
+                full_tree=self._widget.show_full_tree.isChecked(),
+            ))
             self._render_debug_data(self.dsd_follower.to_q_item_model())
 
     def _render_messages(self, *messages):
