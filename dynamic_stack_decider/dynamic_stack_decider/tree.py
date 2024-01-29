@@ -28,18 +28,19 @@ class Tree:
         return self.root_element.repr_dict() or {}
 
 
-
 class AbstractTreeElement:
     """
     An element (node) in the tree. Do not use directly,
     use one of DecisionTreeElement and ActionTreeElement instead
     """
 
-    def __init__(self,
-                 name:str,
-                 parent: Optional["AbstractTreeElement"],
-                 parameters: Optional[dict] = None,
-                 unset_parameters: Optional[dict] = None):
+    def __init__(
+        self,
+        name: str,
+        parent: Optional["AbstractTreeElement"],
+        parameters: Optional[dict] = None,
+        unset_parameters: Optional[dict] = None,
+    ):
         self.name = name
         self.parent = parent
         self.parameters = parameters or dict()
@@ -67,7 +68,7 @@ class AbstractTreeElement:
         """
         return {
             "name": self.name,
-            "parameters": self.parameters
+            "parameters": self.parameters,
         }
 
 
@@ -127,10 +128,9 @@ class DecisionTreeElement(AbstractTreeElement):
         # Get the dict from the superclass
         result = super().repr_dict()
         # Add additional information
-        result['type'] = 'decision'
-        result['children'] = {result: child.repr_dict() for result, child in self.children.items()}
+        result["type"] = "decision"
+        result["children"] = {result: child.repr_dict() for result, child in self.children.items()}
         return result
-
 
 
 class SequenceTreeElement(AbstractTreeElement):
@@ -169,8 +169,8 @@ class SequenceTreeElement(AbstractTreeElement):
         # Get the dict from the superclass
         result = super().repr_dict()
         # Add additional information
-        result['type'] = 'sequence'
-        result['action_elements'] = [action.repr_dict() for action in self.action_elements]
+        result["type"] = "sequence"
+        result["action_elements"] = [action.repr_dict() for action in self.action_elements]
         return result
 
 
@@ -205,5 +205,5 @@ class ActionTreeElement(AbstractTreeElement):
         # Get the dict from the superclass
         result = super().repr_dict()
         # Add additional information
-        result['type'] = 'action'
+        result["type"] = "action"
         return result

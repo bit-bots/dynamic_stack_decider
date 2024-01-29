@@ -34,7 +34,6 @@ import uuid
 from typing import Optional
 
 import pydot
-import yaml
 from ament_index_python import get_package_share_directory
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Qt
@@ -49,7 +48,6 @@ from rqt_gui_py.plugin import Plugin
 
 from .dsd_follower import DsdFollower
 from .interactive_graphics_view import InteractiveGraphicsView
-
 
 
 class DsdVizPlugin(Plugin):
@@ -147,7 +145,7 @@ class DsdVizPlugin(Plugin):
         # List all known topics
         topics = self._node.get_topic_names_and_types()
         for topic_name, topic_types in topics:
-            if topic_name.endswith("/dsd_tree"):
+            if topic_name.endswith("/dsd_tree") and "std_msgs/msg/String" in topic_types:
                 # Extract the dsd name from the topic name
                 dsd_name = topic_name.split("/")[-2].upper()
                 # Store the dsd name and the debug topic namespace (not just the tree topic)
@@ -166,7 +164,9 @@ class DsdVizPlugin(Plugin):
         super().save_settings(plugin_settings, instance_settings)
 
         instance_settings.set_value("auto_fit_graph_check_box_state", self._widget.auto_fit_graph_check_box.isChecked())
-        instance_settings.set_value("highlight_connections_check_box_state", self._widget.highlight_connections_check_box.isChecked())
+        instance_settings.set_value(
+            "highlight_connections_check_box_state", self._widget.highlight_connections_check_box.isChecked()
+        )
         instance_settings.set_value("show_full_tree_check_box_state", self._widget.show_full_tree.isChecked())
 
     def restore_settings(self, plugin_settings, instance_settings):
@@ -301,7 +301,6 @@ class DsdVizPlugin(Plugin):
 
         # Initialize dsd follower
         self.dsd_follower = DsdFollower(self._node, self.running_dsd_instances[name])
-
 
 
 def main():

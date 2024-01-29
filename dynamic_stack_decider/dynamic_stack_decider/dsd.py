@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, DurabilityPolicy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from std_msgs.msg import String
 
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
@@ -135,17 +135,13 @@ class DSD:
             # Create tree publisher
             debug_tree_topic = f"{debug_topic}/dsd_tree"
             # We use a latched publisher because the tree is only published once most of the time
-            latched_qos = QoSProfile(
-                depth=10,
-                durability=DurabilityPolicy.TRANSIENT_LOCAL)
+            latched_qos = QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL)
             self.debug_tree_publisher = node.create_publisher(String, debug_tree_topic, latched_qos)
             get_logger().debug(f"Debugging tree on '{debug_tree_topic}' (latched)")
             # Create stack publisher
             debug_stack_topic = f"{debug_topic}/dsd_stack"
             self.debug_stack_publisher = node.create_publisher(String, debug_stack_topic, 10)
             get_logger().debug(f"Debugging stack on '{debug_stack_topic}'")
-
-
 
     def register_actions(self, module_path):
         """

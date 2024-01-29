@@ -4,11 +4,9 @@ from typing import Optional, Union
 
 import pydot
 from python_qt_binding.QtGui import QStandardItem, QStandardItemModel
-from std_msgs.msg import String
-from builtin_interfaces.msg import Time
-import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, DurabilityPolicy
+from rclpy.qos import DurabilityPolicy, QoSProfile
+from std_msgs.msg import String
 
 
 class ParseError(Exception):
@@ -39,18 +37,13 @@ class DsdFollower:
             String,
             f"{debug_topic}/dsd_tree",
             self._tree_callback,
-            qos_profile=QoSProfile(
-                depth=10,
-                durability=DurabilityPolicy.TRANSIENT_LOCAL))
+            qos_profile=QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL),
+        )
 
         self._node.get_logger().info(f"Subscribed to {debug_topic}/dsd_tree")
 
         # Subscribe to the DSDs stack
-        self.stack_sub = self._node.create_subscription(
-            String,
-            f"{debug_topic}/dsd_stack",
-            self._stack_callback,
-            10)
+        self.stack_sub = self._node.create_subscription(String, f"{debug_topic}/dsd_stack", self._stack_callback, 10)
         self._node.get_logger().info(f"Subscribed to {debug_topic}/dsd_stack")
 
     def _tree_callback(self, msg):
@@ -155,7 +148,8 @@ class DsdFollower:
             :return: A string representation of the parameters
             """
             # Return empty string if no parameters are given
-            if not params: return ""
+            if not params:
+                return ""
 
             output = []
             for param_name, param_value in params.items():
@@ -167,7 +161,6 @@ class DsdFollower:
             assert stack_element["type"] == tree_element["type"], "The stack and the tree do not match"
             if stack_element["type"] != "sequence":
                 assert stack_element["name"] == tree_element["name"], "The stack and the tree do not match"
-
 
         # Initialize parameters of the dot node we are going to create
         dot_node_params = {
@@ -204,7 +197,9 @@ class DsdFollower:
         # Create node in graph
         return pydot.Node(**dot_node_params)
 
-    def _stack_to_dotgraph(self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None, full_tree: bool = False) -> (pydot.Dot, str):
+    def _stack_to_dotgraph(
+        self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None, full_tree: bool = False
+    ) -> (pydot.Dot, str):
         """
         Recursively modify dot to include every element of the stack
 
@@ -231,27 +226,23 @@ class DsdFollower:
             for activating_result, child in subtree_root["children"].items():
                 # Get the root of the sub stack if this branch the one which is currently on the stack
                 sub_stack_root = None
-                if stack_root is not None \
-                        and stack_root["next"] is not None \
-                        and stack_root["next"]["activation_reason"] == activating_result:
+                if (
+                    stack_root is not None
+                    and stack_root["next"] is not None
+                    and stack_root["next"]["activation_reason"] == activating_result
+                ):
                     sub_stack_root = stack_root["next"]
 
                 # Recursively generate dot nodes for the children
-                dot, child_uid = self._stack_to_dotgraph(
-                    dot,
-                    child,
-                    sub_stack_root,
-                    full_tree
-                )
+                dot, child_uid = self._stack_to_dotgraph(dot, child, sub_stack_root, full_tree)
                 # Connect the child to the parent element
-                edge = pydot.Edge(
-                    src=dot_node.get_name(),
-                    dst=child_uid,
-                    label=activating_result)
+                edge = pydot.Edge(src=dot_node.get_name(), dst=child_uid, label=activating_result)
                 dot.add_edge(edge)
         return dot, dot_node.get_name()
 
-    def _append_debug_data_to_item(self, parent_item: QStandardItem, debug_data: Union[dict, list, int, float, str, bool]):
+    def _append_debug_data_to_item(
+        self, parent_item: QStandardItem, debug_data: Union[dict, list, int, float, str, bool]
+    ):
         """
         Append an elements debug_data to a QStandardItem.
 
@@ -294,10 +285,7 @@ class DsdFollower:
 
         # Create dot graph
         self._cached_dotgraph, _ = self._stack_to_dotgraph(
-            pydot.Dot(graph_type="digraph"),
-            self.tree,
-            self.stack,
-            full_tree
+            pydot.Dot(graph_type="digraph"), self.tree, self.stack, full_tree
         )
 
         return self._cached_dotgraph
@@ -328,8 +316,8 @@ class DsdFollower:
             elem_item.setEditable(False)
 
             # Set the text of the item
-            if stack_element['type'] == "sequence":
-                action_names = [element["name"] for element in stack_element['content']]
+            if stack_element["type"] == "sequence":
+                action_names = [element["name"] for element in stack_element["content"]]
                 elem_item.setText("Sequence: " + ", ".join(action_names))
             else:
                 elem_item.setText(stack_element["name"])

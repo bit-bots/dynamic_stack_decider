@@ -91,5 +91,5 @@ class AbstractStackElement(metaclass=ABCMeta):
         return {
             "type": "abstract",
             "name": self.__class__.__name__,
-            "debug_data": self._debug_data
+            "debug_data": self._debug_data,
         }
