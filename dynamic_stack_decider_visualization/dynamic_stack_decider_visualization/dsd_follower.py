@@ -33,18 +33,19 @@ class DsdFollower:
         self._cached_dotgraph: Optional[pydot.Dot] = None
 
         # Subscribe to the DSDs tree (latched)
+        dsd_tree_topic = f"{debug_topic}/dsd_tree"
         self.tree_sub = self._node.create_subscription(
             String,
-            f"{debug_topic}/dsd_tree",
+            dsd_tree_topic,
             self._tree_callback,
             qos_profile=QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL),
         )
-
-        self._node.get_logger().info(f"Subscribed to {debug_topic}/dsd_tree")
+        self._node.get_logger().info(f"Subscribed to {dsd_tree_topic}")
 
         # Subscribe to the DSDs stack
-        self.stack_sub = self._node.create_subscription(String, f"{debug_topic}/dsd_stack", self._stack_callback, 10)
-        self._node.get_logger().info(f"Subscribed to {debug_topic}/dsd_stack")
+        dsd_stack_topic = f"{debug_topic}/dsd_stack"
+        self.stack_sub = self._node.create_subscription(String, dsd_stack_topic, self._stack_callback, 10)
+        self._node.get_logger().info(f"Subscribed to {dsd_stack_topic}")
 
     def _tree_callback(self, msg):
         self._node.get_logger().info("Received tree")
@@ -158,9 +159,13 @@ class DsdFollower:
 
         # Sanity check
         if stack_element is not None:
-            assert stack_element["type"] == tree_element["type"], "The stack and the tree do not match"
+            assert (
+                stack_element["type"] == tree_element["type"]
+            ), f"The stack and the tree do not match (element type mismatch: {stack_element['type']} vs. {tree_element['type']})"
             if stack_element["type"] != "sequence":
-                assert stack_element["name"] == tree_element["name"], "The stack and the tree do not match"
+                assert (
+                    stack_element["name"] == tree_element["name"]
+                ), f"The stack and the tree do not match (element name mismatch: {stack_element['name']} vs. {tree_element['name']})"
 
         # Initialize parameters of the dot node we are going to create
         dot_node_params = {
@@ -224,7 +229,7 @@ class DsdFollower:
         if "children" in subtree_root and (stack_root is not None or full_tree):
             # Go through all children
             for activating_result, child in subtree_root["children"].items():
-                # Get the root of the sub stack if this branch the one which is currently on the stack
+                # Get the root of the sub stack if this branch of the tree is the one which is currently on the stack
                 sub_stack_root = None
                 if (
                     stack_root is not None
@@ -244,7 +249,7 @@ class DsdFollower:
         self, parent_item: QStandardItem, debug_data: Union[dict, list, int, float, str, bool]
     ):
         """
-        Append an elements debug_data to a QStandardItem.
+        Appends debug_data of a given element and its children to a QStandardItem.
 
         :type parent_item: python_qt_binding.QtGui.QStandardItem
         :type debug_data: dict or list or int or float or str or bool
@@ -278,7 +283,7 @@ class DsdFollower:
         if self._cached_dotgraph is not None:
             return self._cached_dotgraph
 
-        self._node.get_logger().info("Generating dotgraph")
+        self._node.get_logger().debug("Generating dotgraph")
 
         # Check if we received any data yet
         if self.stack is None or self.tree is None:
