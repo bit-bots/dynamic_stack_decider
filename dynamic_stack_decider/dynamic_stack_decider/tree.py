@@ -67,8 +67,7 @@ class AbstractTreeElement:
         """
         return {
             "name": self.name,
-            "parameters": self.parameters,
-            "unset_parameters": self.unset_parameters,
+            "parameters": self.parameters
         }
 
 
