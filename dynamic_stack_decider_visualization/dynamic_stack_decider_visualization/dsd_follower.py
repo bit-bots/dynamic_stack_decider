@@ -32,6 +32,9 @@ class DsdFollower:
         self.tree: Optional[dict] = None
         self.stack: Optional[dict] = None
 
+        self._cached_dotgraph = None
+        self._cached_item_model = None
+
         # Subscribe to the DSDs tree (latched)
         self.tree_sub = self._node.create_subscription(
             String,
@@ -39,7 +42,7 @@ class DsdFollower:
             self._tree_callback,
             qos_profile=QoSProfile(
                 depth=10,
-                reliability=DurabilityPolicy.TRANSIENT_LOCAL))
+                durability=DurabilityPolicy.TRANSIENT_LOCAL))
 
         self._node.get_logger().info(f"Subscribed to {debug_topic}/dsd_tree")
 
@@ -51,30 +54,67 @@ class DsdFollower:
             10)
         self._node.get_logger().info(f"Subscribed to {debug_topic}/dsd_stack")
 
-        self._cached_dotgraph = None
-        self._cached_item_model = None
-
     def _tree_callback(self, msg):
         self._node.get_logger().info("Received tree")
+        # Deserialize the tree message
+        # This is a json string because the tree is a dynamically nested structure of variable length
         self.tree = json.loads(msg.data)
 
     def _stack_callback(self, msg):
-        # Deserialize the stack message
-        stack = json.loads(msg.data)
-
-        # Abort if nothing changed
-        if self.stack == stack:
-            return
-
         # Abort if no tree was received yet
         if self.tree is None:
             return
 
-        # Update stack
+        # Deserialize the stack message
+        stack = json.loads(msg.data)
+
+        # Abort if nothing changed
+        if not DsdFollower.stack_dict_changed(self.stack, stack):
+            return
+
         self.stack = stack
+
         # Reset cache
         self._cached_dotgraph = None
         self._cached_item_model = None
+
+    @staticmethod
+    def stack_dict_changed(old_stack_element, new_stack_element) -> bool:
+        """
+        Check if two stack dicts are different
+        """
+        if type(old_stack_element) != type(new_stack_element):
+            return True
+        elif isinstance(old_stack_element, dict):
+            # Check if the length of the stack changed
+            if len(old_stack_element) != len(new_stack_element):
+                return True
+
+            ignore_keys = ["debug_data"]
+
+            # Check if the content of the stack changed
+            for key in old_stack_element.keys():
+                if key in ignore_keys:
+                    continue
+                if key not in new_stack_element.keys():
+                    return True
+                if DsdFollower.stack_dict_changed(old_stack_element[key], new_stack_element[key]):
+                    return True
+        elif isinstance(old_stack_element, list):
+            # Check if the length of the stack changed
+            if len(old_stack_element) != len(new_stack_element):
+                return True
+            # Check if the content of the stack changed
+            for i in range(len(old_stack_element)):
+                if DsdFollower.stack_dict_changed(old_stack_element[i], new_stack_element[i]):
+                    return True
+        elif isinstance(old_stack_element, (int, float, str, bool)) or old_stack_element is None:
+            if old_stack_element != new_stack_element:
+                return True
+        else:
+            raise ParseError(f"Unknown type {type(old_stack_element)}")
+        # The stack did not change
+        return False
 
     @staticmethod
     def _error_dotgraph():
@@ -103,10 +143,10 @@ class DsdFollower:
         return QStandardItemModel()
 
     @staticmethod
-    def _dot_node_from_stack_element(element: dict, active: bool) -> pydot.Node:
+    def _dot_node_from_tree_element(tree_element: dict, stack_element: Optional[dict] = None) -> pydot.Node:
         """
-        :param element: The element to generate the dot node from
-        :param active: Whether the node is currently active or not
+        :param tree_element: The node from the dsd tree which should be converted to a dot node
+        :param stack_element: The corresponding element from the stack
         :return: The corresponding dot node
         """
 
@@ -123,38 +163,47 @@ class DsdFollower:
                 output.append(f"{param_name}: {str(param_value)}")
             return " (" + ", ".join(output) + ")"
 
+        # Sanity check
+        if stack_element is not None:
+            assert stack_element["type"] == tree_element["type"], "The stack and the tree do not match"
+            if stack_element["type"] != "sequence":
+                assert stack_element["name"] == tree_element["name"], "The stack and the tree do not match"
+
+        # Initialize parameters of the dot node we are going to create
+        dot_node_params = {
+            "name": str(uuid.uuid4()),
+        }
 
         # Go through all possible element types and create the corresponding label and shape
-        if element["type"] == "sequence":
-            shape = "box"
+        if tree_element["type"] == "sequence":
+            dot_node_params["shape"] = "box"
 
+            # If we have a sequence we have to create a label for each action and mark the current one (if one is on the stack)
             label = ["Sequence:"]
-            for i, action in enumerate(element["action_elements"]):
+            for i, action in enumerate(tree_element["action_elements"]):
                 # Spaces for indentation
                 action_label = "  "
                 # Mark current element (if this sequence is on the stack)
-                if active and i == element["current_action_index"]:
+                if stack_element is not None and i == stack_element["current_action_id"]:
                     action_label += "--> "
                 action_label += action["name"] + param_string(action["parameters"])
                 label.append(action_label)
-            label = "\n".join(label)
-        elif element["type"] == "decision":
-            shape = "ellipse"
-            label = element["name"] + param_string(element["parameters"])
-
-        elif element["type"] == "action":
-            shape = "box"
-            label = element["name"] + param_string(element["parameters"])
+            dot_node_params["label"] = "\n".join(label)
+        elif tree_element["type"] == "decision":
+            dot_node_params["shape"] = "ellipse"
+            dot_node_params["label"] = tree_element["name"] + param_string(tree_element["parameters"])
+        elif tree_element["type"] == "action":
+            dot_node_params["shape"] = "box"
+            dot_node_params["label"] = tree_element["name"] + param_string(tree_element["parameters"])
         else:
-            raise ParseError(f"Unknown element type {element['type']}")
+            raise ParseError(f"Unknown element type {tree_element['type']}")
+
+        # Set color if this element is not on the stack
+        if stack_element is None:
+            dot_node_params["color"] = "lightgray"
 
         # Create node in graph
-        return pydot.Node(\
-            str(uuid.uuid4()),
-            label=label,
-            shape=shape,
-            color="lightgray" if not active else None,
-        )
+        return pydot.Node(**dot_node_params)
 
     def _stack_to_dotgraph(self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None) -> (pydot.Dot, str):
         """
@@ -163,16 +212,17 @@ class DsdFollower:
         # Sanity check
         if stack_root is not None:
             assert stack_root["type"] == subtree_root["type"], "The stack and the tree do not match"
-            assert stack_root["name"] == subtree_root["name"], "The stack and the tree do not match"
+            if stack_root["type"] != "sequence":
+                assert stack_root["name"] == subtree_root["name"], "The stack and the tree do not match"
 
         # Generate dot node for the root and mark it as active if it is on the stack
-        dot_node = DsdFollower._dot_node_from_stack_element(subtree_root, stack_root is not None)
+        dot_node = DsdFollower._dot_node_from_tree_element(subtree_root, stack_root)
         # Append this element to graph
         dot.add_node(dot_node)
 
         # Append all direct children to graph
         # Also append all children which are on the stack to the graph
-        if "children" in subtree_root:
+        if "children" in subtree_root and stack_root is not None:
             # Go through all children
             for activating_result, child in subtree_root["children"].items():
                 # Get the root of the sub stack if this branch the one which is currently on the stack
@@ -182,14 +232,24 @@ class DsdFollower:
                         and stack_root["next"]["activation_reason"] == activating_result:
                     sub_stack_root = stack_root["next"]
 
-                # Add this child to the graph
+                # Recursively generate dot nodes for the children
                 dot, child_uid = self._stack_to_dotgraph(
                     dot,
                     child,
                     sub_stack_root
                 )
                 # Connect the child to the parent element
-                edge = pydot.Edge(dot_node.get_name(), child_uid, label=activating_result)
+                edge_params = {
+                    "src": dot_node.get_name(),
+                    "dst": child_uid,
+                    "label": activating_result,
+                }
+                # Set color if this element is not on the stack
+                if sub_stack_root is None or True:
+                    edge_params["color"] = "blue"
+                    edge_params["fontcolor"] = "blue" # TODO fix color
+                # Build edge
+                edge = pydot.Edge(**edge_params)
                 dot.add_edge(edge)
         return dot, dot_node.get_name()
 
@@ -234,12 +294,12 @@ class DsdFollower:
             return self._error_dotgraph()
 
         # Create dot graph
-        dot = pydot.Dot(graph_type="digraph")
-        dot, _ = self._stack_to_dotgraph(dot, self.tree, self.stack)
+        self._cached_dotgraph, _ = self._stack_to_dotgraph(
+            pydot.Dot(graph_type="digraph"),
+            self.tree,
+            self.stack)
 
-        # Cache result
-        self._cached_dotgraph = dot
-        return dot
+        return self._cached_dotgraph
 
     def to_q_item_model(self):
         """
@@ -287,4 +347,3 @@ class DsdFollower:
 
         self._cached_item_model = model
         return self._cached_item_model
-

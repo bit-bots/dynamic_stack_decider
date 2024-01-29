@@ -136,7 +136,7 @@ class DSD:
             debug_tree_topic = f"{debug_topic}/dsd_tree"
             # We use a latched publisher because the tree is only published once most of the time
             latched_qos = QoSProfile(
-                depth=1,
+                depth=10,
                 durability=DurabilityPolicy.TRANSIENT_LOCAL)
             self.debug_tree_publisher = node.create_publisher(String, debug_tree_topic, latched_qos)
             get_logger().debug(f"Debugging tree on '{debug_tree_topic}' (latched)")
