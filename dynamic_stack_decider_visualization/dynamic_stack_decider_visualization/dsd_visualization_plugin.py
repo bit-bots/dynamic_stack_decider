@@ -127,7 +127,7 @@ class DsdVizPlugin(Plugin):
             self._widget.auto_fit_graph_check_box.setChecked(False)
             self._widget.graphics_view.__class__.wheelEvent(self._widget.graphics_view, event)
 
-        # Call it as well as the original wheelEvent
+        # Overwrite the original wheelEvent handler
         self._widget.graphics_view.wheelEvent = wheel_event
 
         # Add widget to the user interface
