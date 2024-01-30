@@ -80,7 +80,7 @@ When the element is reevaluated, `perform` is called on the element.
 If the result of `perform` is the same as the last time it was called, nothing happens and the next decision is reevaluated.
 If the result of `perform` is different from the last time, everything above the reevaluated decision is discarded and a new element, depending on the result of `perform`, is pushed on the stack and executed.
 
-An action can call `self.do_not_reevaluate()` to avoid reevaluation of the stack on the next call to `update`. Alternatively the parameters (see #Parameters) `r` or `reevaluate` can be used in the dsd file to enable or disable the reevaluation during a specific action. 
+An action can call `self.do_not_reevaluate()` to avoid reevaluation of the stack on the next call to `update`. Alternatively the parameters (see #Parameters) `r` or `reevaluate` can be used in the dsd file to enable or disable the reevaluation during a specific action.
 
 ## Sequence elements
 
@@ -96,7 +96,7 @@ The syntax is `@Action + parameter:value`, multiple parameters can be passed usi
 The parameters to an element are passed to the element's constructor as a dictionary.
 The value of the parameter is passed through `yaml.safe_load`.
 Therefore, you can use integers, floats, booleans or strings as values.
-It is also possible to load parameters from the ROS parameter server using `parameter:%rosparam`, where `rosparam` is the name of the parameter on the parameter server. 
+It is also possible to load parameters from the ROS parameter server using `parameter:%rosparam`, where `rosparam` is the name of the parameter on the parameter server.
 
 Here is an example:
 ```
@@ -158,13 +158,13 @@ $Mode
 
 ## Interrupt
 
-A stack element can call `self.interrupt()` to create an interrupt which removes all elements except for the start element from the stack (i.e., the DSD is restarted). 
+A stack element can call `self.interrupt()` to create an interrupt which removes all elements except for the start element from the stack (i.e., the DSD is restarted).
 
 ## Debugging
 
 For debugging, the DSD visualization should be used.
-It reads the locations of different DSDs from `config/locations.yaml` and can be launched in rqt.
-The visualization shows the DSD tree with the currently active actions and decisions on the left and the current stack on the right.
+It automatically discovers all running DSDs with a debug topic and visualizes them in RQT.
+The visualization shows the DSD tree with the currently active actions and decisions as a tree on the left and the current stack on the right.
 More information can be added to the right side by calling `self.publish_debug_data(label, data)` in any action or decision.
 
 ## DSD Development GUI
@@ -176,8 +176,8 @@ If you use VSCode, you can use the [DSD extension](https://marketplace.visualstu
 ## Examples
 
 Here are a few projects that use the DSD and can be used for reference:
-* The [Bit-Bots Body Behavior](https://github.com/bit-bots/bitbots_behavior/tree/master/bitbots_body_behavior/bitbots_body_behavior)
-* The [Bit-Bots Humanoid Control Module](https://github.com/bit-bots/bitbots_motion/tree/master/bitbots_hcm/bitbots_hcm/hcm_dsd)
+* The [Bit-Bots Behavior](https://github.com/bit-bots/bitbots_main/tree/main/bitbots_behavior)
+* The [Bit-Bots Humanoid Control Module](https://github.com/bit-bots/bitbots_main/tree/main/bitbots_motion/bitbots_hcm/bitbots_hcm/hcm_dsd)
 * The [Parser Test](https://github.com/bit-bots/dynamic_stack_decider/tree/master/dynamic_stack_decider/test) in this repository
 
 ## The Paper
