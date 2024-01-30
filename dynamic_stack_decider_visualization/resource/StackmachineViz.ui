@@ -20,19 +20,6 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,0,0,0,0,0,0,0">
      <item>
-      <widget class="QPushButton" name="refresh_graph_push_button">
-       <property name="toolTip">
-        <string>Refresh ROS graph</string>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QCheckBox" name="highlight_connections_check_box">
        <property name="toolTip">
         <string>Highlight incoming and outgoing connections on mouse over</string>
@@ -45,6 +32,19 @@
        </property>
       </widget>
      </item>
+     <item>
+        <widget class="QCheckBox" name="show_full_tree">
+         <property name="toolTip">
+          <string>Show the full tree instead of the current stack and its direct neighbors</string>
+         </property>
+         <property name="text">
+          <string>Full Tree</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
      <item>
       <widget class="QCheckBox" name="auto_fit_graph_check_box">
        <property name="toolTip">
@@ -119,40 +119,19 @@
      <item>
       <widget class="QComboBox" name="dsd_selector_combo_box"/>
      </item>
-     <item>
-      <widget class="QPushButton" name="load_dot_push_button">
-       <property name="toolTip">
-        <string>Load DOT graph from file</string>
-       </property>
-       <property name="icon">
-        <iconset theme="document-open">
-         <normaloff>.</normaloff>.</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="save_dot_push_button">
-       <property name="toolTip">
-        <string>Save as DOT graph</string>
-       </property>
-       <property name="icon">
-        <iconset theme="document-save-as">
-         <normaloff>.</normaloff>.</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-      </widget>
-     </item>
+    <item>
+    <widget class="QPushButton" name="refresh_combobox_push_button">
+        <property name="toolTip">
+            <string>Refresh combobox</string>
+        </property>
+        <property name="iconSize">
+            <size>
+                <width>16</width>
+                <height>16</height>
+            </size>
+        </property>
+    </widget>
+    </item>
      <item>
       <widget class="QPushButton" name="save_as_svg_push_button">
        <property name="toolTip">
@@ -160,23 +139,6 @@
        </property>
        <property name="icon">
         <iconset theme="document-save-as">
-         <normaloff>.</normaloff>.</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="save_as_image_push_button">
-       <property name="toolTip">
-        <string>Save as image</string>
-       </property>
-       <property name="icon">
-        <iconset theme="image">
          <normaloff>.</normaloff>.</iconset>
        </property>
        <property name="iconSize">
@@ -214,6 +176,9 @@
                 </property>
             </widget>
             <widget class="QTreeView" name="stack_prop_tree_view">
+                <property name="styleSheet">
+                    <string notr="true">QTreeView { padding: 10px; }</string>
+                </property>
                 <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                         <horstretch>1</horstretch>

@@ -20,13 +20,15 @@ class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
 
     _reevaluate = False
 
-    def repr_dict(self):
+    def repr_dict(self) -> dict:
         """
         Represent this stack element as dictionary which is JSON encodable
-
-        :rtype: dict
         """
-        return {"type": "decision", "classname": self.__class__.__name__, "debug_data": self._debug_data}
+        return {
+            "type": "decision",
+            "name": self.__class__.__name__,
+            "debug_data": self._debug_data,
+        }
 
     def get_reevaluate(self):
         """

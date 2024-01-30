@@ -1,112 +1,113 @@
 import json
 import uuid
+from typing import Optional, Union
 
 import pydot
 from python_qt_binding.QtGui import QStandardItem, QStandardItemModel
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from std_msgs.msg import String
-
-from dynamic_stack_decider.dsd import DSD
-from dynamic_stack_decider.parser import DsdParser
-from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, SequenceTreeElement
-
-
-class FakeParameter:
-    value = None
-
-
-class FakeNode:
-    def __init__(self, logger):
-        self.logger = logger
-
-    def get_parameter(self, name: str) -> FakeParameter:
-        return FakeParameter()
-
-    def get_logger(self):
-        return self.logger
 
 
 class ParseError(Exception):
     pass
 
 
-class DsdFollower(DSD):
-    def __init__(self, node, debug_topic):
-        super().__init__(None, node=node)
+class DsdFollower:
+    def __init__(self, node: Node, debug_topic: str):
+        """
+        Creates a new DSD follower which subscribes to the given debug topics,
+        fetches it's tree and listens for the current stack.
+        It provides the rendered tree and the current stack visualization based on the received data.
+
+        :param node: Reference to the used ROS node\
+        :param debug_topic: The topic namespace on which the DSD publishes its debug data
+        """
         self._node = node
 
-        self.debug_subscriber = self._node.create_subscription(String, debug_topic, self.subscriber_callback, 10)
-        self._cached_msg = None
-        self._cached_dotgraph = None
-        self._cached_item_model = None
-        self.initialized = False
+        self.dsd_debug_topic = debug_topic
 
-    def _init_element(self, element, parameters=None):
-        """
-        We do not initialize anything on the follower
-        """
-        return None
+        self.tree: Optional[dict] = None
+        self.stack: Optional[dict] = None
 
-    def update(self, reevaluate=True):
-        """
-        The DSD follower does not execute any code
-        """
-        pass
+        self._cached_dotgraph: Optional[pydot.Dot] = None
 
-    def _parse_remote_data(self, remaining_data, parent_element=None):
-        """
-        Recursively parse the remaining part of a remote DSDs state description message
-        :arg parent_element: The Tree element which is the parent of the newly parsed element
-        :type parent_element: AbstractTreeElement
-        :type remaining_data: dict
-        """
-        if remaining_data is None:
-            # recursion exit
+        # Subscribe to the DSDs tree (latched)
+        dsd_tree_topic = f"{debug_topic}/dsd_tree"
+        self.tree_sub = self._node.create_subscription(
+            String,
+            dsd_tree_topic,
+            self._tree_callback,
+            qos_profile=QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL),
+        )
+        self._node.get_logger().info(f"Subscribed to {dsd_tree_topic}")
+
+        # Subscribe to the DSDs stack
+        dsd_stack_topic = f"{debug_topic}/dsd_stack"
+        self.stack_sub = self._node.create_subscription(String, dsd_stack_topic, self._stack_callback, 10)
+        self._node.get_logger().info(f"Subscribed to {dsd_stack_topic}")
+
+    def _tree_callback(self, msg):
+        self._node.get_logger().info("Received tree")
+        # Deserialize the tree message
+        # This is a json string because the tree is a dynamically nested structure of variable length
+        self.tree = json.loads(msg.data)
+
+    def _stack_callback(self, msg):
+        # Abort if no tree was received yet
+        if self.tree is None:
             return
 
-        if remaining_data["type"] == "abstract":
-            raise ParseError("Remote DSD sent an abstract element in its stack")
+        # Deserialize the stack message
+        stack = json.loads(msg.data)
 
-        if isinstance(parent_element, ActionTreeElement):
-            raise ParseError(
-                "The remote DSD sent further elements which seem to be on the stack"
-                "but the local DSD tree has already reached an ActionElement"
-            )
+        # Check if the stack changed (ignore debug_data log messages)
+        if DsdFollower.stack_dict_changed(self.stack, stack, ignore_keys=["debug_data"]):
+            # Reset cache / trigger redraw
+            self.reset_cache()
 
-        if parent_element is None:
-            # If no parent_element was given, then we are processing the root element
-            self.set_start_element(self.tree.root_element)
-            self.tree.root_element.debug_data = remaining_data["debug_data"]
+        # Update stack
+        self.stack = stack
 
-            self._parse_remote_data(remaining_data["next"], self.tree.root_element)
+    def reset_cache(self):
+        """Reset the cached dotgraph"""
+        self._cached_dotgraph = None
 
+    @staticmethod
+    def stack_dict_changed(old_stack_element, new_stack_element, ignore_keys) -> bool:
+        """
+        Check if two stack dicts are different
+        """
+        if type(old_stack_element) != type(new_stack_element):
+            return True
+        elif isinstance(old_stack_element, dict):
+            # Check if the length of the stack changed
+            if len(old_stack_element) != len(new_stack_element):
+                return True
+
+            # Check if the content of the stack changed
+            for key in old_stack_element.keys():
+                if key in ignore_keys:
+                    continue
+                if key not in new_stack_element.keys():
+                    return True
+                if DsdFollower.stack_dict_changed(old_stack_element[key], new_stack_element[key], ignore_keys):
+                    return True
+        elif isinstance(old_stack_element, list):
+            # Check if the length of the stack changed
+            if len(old_stack_element) != len(new_stack_element):
+                return True
+            # Check if the content of the stack changed
+            for i in range(len(old_stack_element)):
+                if DsdFollower.stack_dict_changed(old_stack_element[i], new_stack_element[i], ignore_keys):
+                    return True
+        elif isinstance(old_stack_element, (int, float, str, bool)) or old_stack_element is None:
+            if old_stack_element != new_stack_element:
+                return True
         else:
-            element = parent_element.get_child(remaining_data["activation_reason"])
-            element.debug_data = remaining_data["debug_data"]
-            if remaining_data["type"] == "sequence":
-                element.current_child = remaining_data["current_action_id"]
-                self.push(element)
-            else:
-                self.push(element)
-                self._parse_remote_data(remaining_data["next"], element)
-
-    def subscriber_callback(self, msg):
-        # abort if the dsd is not fully loaded yet
-        if not self.initialized:
-            return
-
-        msg = msg.data
-
-        # abort if nothing changed
-        if msg == self._cached_msg:
-            return
-        self._cached_dotgraph = None
-        self._cached_item_model = None
-
-        # parse the remaining stack (without root element)
-        self._parse_remote_data(json.loads(msg))
-
-        # save the message so we know not to reprocess it again
-        self._cached_msg = msg
+            raise ParseError(f"Unknown type {type(old_stack_element)}")
+        # The stack did not change
+        return False
 
     @staticmethod
     def _error_dotgraph():
@@ -135,184 +136,232 @@ class DsdFollower(DSD):
         return QStandardItemModel()
 
     @staticmethod
-    def _dot_node_from_stack_element(element, active):
+    def _dot_node_from_tree_element(tree_element: dict, stack_element: Optional[dict] = None) -> pydot.Node:
         """
-        :param element: The element to generate the dot node from
-        :type element: AbstractTreeElement
-        :param active: Whether the node is currently active or not
-        :type active: bool
+        :param tree_element: The node from the dsd tree which should be converted to a dot node
+        :param stack_element: The corresponding element from the stack
         :return: The corresponding dot node
-        :rtype: pydot.Node
         """
 
-        def param_string(params):
-            # type: (dict) -> str
-            pstr = []
-            for pkey, pval in params.items():
-                pstr.append(pkey + ": " + str(pval))
-            pstr = ", ".join(pstr)
-            pstr = " (" + pstr + ")"
-            return pstr
+        def param_string(params: dict) -> str:
+            """
+            :param params: A dict of parameters
+            :return: A string representation of the parameters
+            """
+            # Return empty string if no parameters are given
+            if not params:
+                return ""
 
-        if isinstance(element, SequenceTreeElement):
-            shape = "box"
+            output = []
+            for param_name, param_value in params.items():
+                output.append(f"{param_name}: {str(param_value)}")
+            return " (" + ", ".join(output) + ")"
 
+        # Sanity check
+        if stack_element is not None:
+            assert (
+                stack_element["type"] == tree_element["type"]
+            ), f"The stack and the tree do not match (element type mismatch: {stack_element['type']} vs. {tree_element['type']})"
+            if stack_element["type"] != "sequence":
+                assert (
+                    stack_element["name"] == tree_element["name"]
+                ), f"The stack and the tree do not match (element name mismatch: {stack_element['name']} vs. {tree_element['name']})"
+
+        # Initialize parameters of the dot node we are going to create
+        dot_node_params = {
+            "name": str(uuid.uuid4()),
+        }
+
+        # Go through all possible element types and create the corresponding label and shape
+        if tree_element["type"] == "sequence":
+            dot_node_params["shape"] = "box"
+
+            # If we have a sequence we have to create a label for each action and mark the current one (if one is on the stack)
             label = ["Sequence:"]
-            for i, e in enumerate(element.action_elements):
+            for i, action in enumerate(tree_element["action_elements"]):
                 # Spaces for indentation
                 action_label = "  "
                 # Mark current element (if this sequence is on the stack)
-                if active and i == element.current_child:
+                if stack_element is not None and i == stack_element["current_action_id"]:
                     action_label += "--> "
-                action_label += e.name
-                if e.parameters:
-                    action_label += param_string(e.parameters)
+                action_label += action["name"] + param_string(action["parameters"])
                 label.append(action_label)
-            label = "\n".join(label)
-
-        elif isinstance(element, DecisionTreeElement):
-            shape = "ellipse"
-            label = element.name
-            if element.parameters:
-                label += param_string(element.parameters)
-
+            dot_node_params["label"] = "\n".join(label)
+        elif tree_element["type"] == "decision":
+            dot_node_params["shape"] = "ellipse"
+            dot_node_params["label"] = tree_element["name"] + param_string(tree_element["parameters"])
+        elif tree_element["type"] == "action":
+            dot_node_params["shape"] = "box"
+            dot_node_params["label"] = tree_element["name"] + param_string(tree_element["parameters"])
         else:
-            shape = "box"
-            label = element.name
-            if element.parameters:
-                label += param_string(element.parameters)
+            raise ParseError(f"Unknown element type {tree_element['type']}")
+
+        # Set color if this element is on the stack
+        dot_node_params["color"] = "gray" if stack_element is None else "orangered"
 
         # Create node in graph
-        uid = str(uuid.uuid4())
-        if active:
-            return pydot.Node(uid, label=label, shape=shape)
-        else:
-            return pydot.Node(uid, label=label, shape=shape, color="lightgray")
+        return pydot.Node(**dot_node_params)
 
-    def _stack_to_dotgraph(self, stack, dot):
+    def _stack_to_dotgraph(
+        self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None, full_tree: bool = False
+    ) -> (pydot.Dot, str):
         """
         Recursively modify dot to include every element of the stack
+
+        :param dot: The dotgraph to modify
+        :param subtree_root: The root node of the subtree which should be added to the graph
+        :param stack_root: The root node / bottom of the stack which should be added to the graph (this corresponds to subtree_root as they are different representations of the same component). The stack is optional as certain subtrees might not be in contact with the stack.
+        :param full_tree: If true the whole tree is rendered, otherwise only the current stack and its direct neighbors are rendered
+        :return: The modified dotgraph and the uid of the root node
         """
-        element, _ = stack[0]
+        # Sanity check
+        if stack_root is not None:
+            assert (
+                stack_root["type"] == subtree_root["type"]
+            ), f"The stack element type and the tree element type do not match ({stack_root['type']} vs. {subtree_root['type']})"
+            if stack_root["type"] != "sequence":
+                assert (
+                    stack_root["name"] == subtree_root["name"]
+                ), f"The stack element name and the tree element name do not match ({stack_root['name']} vs. {subtree_root['name']})"
 
-        node = DsdFollower._dot_node_from_stack_element(element, True)
+        # Generate dot node for the root and mark it as active if it is on the stack
+        dot_node = DsdFollower._dot_node_from_tree_element(subtree_root, stack_root)
+        # Append this element to graph
+        dot.add_node(dot_node)
 
-        # Determine correct shape
-        dot.add_node(node)
+        # Append children to graph if this element is on the stack or if we want to render the whole tree
+        if "children" in subtree_root and (stack_root is not None or full_tree):
+            # Go through all children
+            for activating_result, child in subtree_root["children"].items():
+                # Get the root of the sub stack if this branch of the tree is the one which is currently on the stack
+                sub_stack_root = None
+                if (
+                    stack_root is not None
+                    and stack_root["next"] is not None
+                    and stack_root["next"]["activation_reason"] == activating_result
+                ):
+                    sub_stack_root = stack_root["next"]
 
-        # Append all direct children to graph
-        # Also append all children which are on the stack to the graph
-        if isinstance(element, DecisionTreeElement):
-            for activating_result, child in element.children.items():
-                # Since this child is on the stack as well, it should be represented completely
-                if len(stack) > 1 and activating_result == stack[1][0].activation_reason:
-                    dot, child_uid = self._stack_to_dotgraph(stack[1:], dot)
-
-                # Draw this child as shape because we want to show direct children of elements
-                else:
-                    child_node = DsdFollower._dot_node_from_stack_element(child, False)
-                    child_uid = child_node.get_name()
-                    dot.add_node(child_node)
-
+                # Recursively generate dot nodes for the children
+                dot, child_uid = self._stack_to_dotgraph(dot, child, sub_stack_root, full_tree)
                 # Connect the child to the parent element
-                edge = pydot.Edge(node.get_name(), child_uid, label=activating_result)
+                edge = pydot.Edge(src=dot_node.get_name(), dst=child_uid, label=activating_result)
                 dot.add_edge(edge)
+        return dot, dot_node.get_name()
 
-        return dot, node.get_name()
-
-    def _append_element_to_item(self, parent_item, debug_data):
+    def _append_debug_data_to_item(
+        self, parent_item: QStandardItem, debug_data: Union[dict, list, int, float, str, bool]
+    ):
         """
-        Append an elements debug_data to a QStandardItem.
+        Appends debug_data of a given element and its children to a QStandardItem.
 
         :type parent_item: python_qt_binding.QtGui.QStandardItem
         :type debug_data: dict or list or int or float or str or bool
-        :rtype: python_qt_binding.QtGui.QStandardItem
         """
         if isinstance(debug_data, list):
             for i, data in enumerate(debug_data):
                 child_item = QStandardItem()
                 child_item.setText(str(i) + ": ")
                 child_item.setEditable(False)
-                self._append_element_to_item(child_item, data)
+                child_item.setSelectable(False)
+                self._append_debug_data_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif isinstance(debug_data, dict):
             for label, data in debug_data.items():
                 child_item = QStandardItem()
                 child_item.setText(str(label) + ": ")
                 child_item.setEditable(False)
-                self._append_element_to_item(child_item, data)
+                child_item.setSelectable(False)
+                self._append_debug_data_to_item(child_item, data)
                 parent_item.appendRow(child_item)
         elif isinstance(debug_data, (bool, float, int, str, bytes)):
             parent_item.setText(parent_item.text() + str(debug_data))
 
-    def to_dotgraph(self):
+    def to_dotgraph(self, full_tree: bool) -> pydot.Dot:
         """
         Represent the current stack as dotgraph
+
+        :param full_tree: If true the whole tree is rendered, otherwise only the current stack is rendered
         """
         # Return cached result if available
         if self._cached_dotgraph is not None:
             return self._cached_dotgraph
 
-        # Return special error graph which shows error information when no data was received
-        if self._cached_msg is None:
+        self._node.get_logger().debug("Generating dotgraph")
+
+        # Check if we received any data yet
+        if self.stack is None or self.tree is None:
+            self._node.get_logger().info("No data received yet")
             return self._error_dotgraph()
 
-        dot = pydot.Dot(graph_type="digraph")
-        dot, uid = self._stack_to_dotgraph(self.stack, dot)
+        # Create dot graph
+        self._cached_dotgraph, _ = self._stack_to_dotgraph(
+            pydot.Dot(graph_type="digraph"), self.tree, self.stack, full_tree
+        )
 
-        self._cached_dotgraph = dot
-        return dot
+        return self._cached_dotgraph
 
     def to_q_item_model(self):
         """
         Represent the DSDs debug data as QITemModel
         """
-        # Return cached result if available
-        if self._cached_item_model is not None:
-            return self._cached_item_model
-
-        # Return empty model when no dsd data was received yet
-        if self._cached_msg is None:
+        # Return if we received no data yet
+        if self.stack is None or self.tree is None:
             return self._empty_item_model()
 
         # Construct a new item-model
         model = QStandardItemModel()
-        for i in range(len(self.stack)):
-            elem, _ = self.stack[i]
+
+        # Start with the root/bottom of the stack
+        stack_element = self.stack
+
+        # Go through all stack elements
+        while stack_element is not None:
+            # Sanity check
+            assert "next" in stack_element, "Stack element has no next element"
+            # Check if this is the last element
+            last_element: bool = stack_element["next"] is None
+
+            # Create a new item for this element
             elem_item = QStandardItem()
             elem_item.setEditable(False)
+            elem_item.setSelectable(False)
 
-            if isinstance(elem, SequenceTreeElement):
-                elem_item.setText("Sequence: " + ", ".join(str(e) for e in elem.action_elements))
-                sequence = True
+            # Set the text of the item
+            if stack_element["type"] == "sequence":
+                # Get the names of all actions
+                action_names = [element["name"] for element in stack_element["content"]]
+                # Join them together and set the text
+                elem_item.setText("Sequence: " + ", ".join(action_names))
             else:
-                elem_item.setText(str(elem))
-                sequence = False
+                elem_item.setText(stack_element["name"])
 
-            self._append_element_to_item(elem_item, elem.debug_data)
+            # Add debug data to the item
+            self._append_debug_data_to_item(elem_item, stack_element["debug_data"])
 
             model.invisibleRootItem().appendRow(elem_item)
 
-            # Add a spacer if this is not the last item
-            if elem != self.stack[-1][0]:
+            # Add a spacer
+            if not last_element:
+                # Create a new horizontal line covering the full with as a spacer of the stack elements
                 spacer = QStandardItem()
                 spacer.setEditable(False)
+                # Disable the selection of the spacer
+                spacer.setSelectable(False)
+                spacer.setText("──────────────────────────────")
+
                 model.invisibleRootItem().appendRow(spacer)
 
-            if sequence:
-                break
+            # Go to next element
+            stack_element = stack_element["next"]
 
-        self._cached_item_model = model
-        return self._cached_item_model
+        return model
 
-    def load_behavior(self, path):
+    def destroy(self):
         """
-        Load a .dsd file into the behaviour to execute it. This should be called after the actions
-        and decisions have been loaded.
-        :param path: The path to the .dsd file describing the behaviour
-        :return:
+        Cleanup the subscriptions, so we don't receive any more data that we don't need.
+        This improves the performance.
+        Also this allows the garbage collector to delete this object and prevent memory leaks.
         """
-        parser = DsdParser(FakeNode(self._node.get_logger()))
-        self.tree = parser.parse(path)
-        self._bind_modules(self.tree.root_element)
-        self.set_start_element(self.tree.root_element)
+        self._node.destroy_subscription(self.tree_sub)
+        self._node.destroy_subscription(self.stack_sub)

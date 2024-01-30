@@ -21,6 +21,12 @@ class Tree:
     def __repr__(self):
         return repr(self.root_element)
 
+    def repr_dict(self) -> dict:
+        """
+        Represent this tree as dictionary which is JSON encodable
+        """
+        return self.root_element.repr_dict() or {}
+
 
 class AbstractTreeElement:
     """
@@ -28,11 +34,18 @@ class AbstractTreeElement:
     use one of DecisionTreeElement and ActionTreeElement instead
     """
 
-    def __init__(self, name: str, parent: Optional["AbstractTreeElement"]):
+    def __init__(
+        self,
+        name: str,
+        parent: Optional["AbstractTreeElement"],
+        parameters: Optional[dict] = None,
+        unset_parameters: Optional[dict] = None,
+    ):
         self.name = name
         self.parent = parent
+        self.parameters = parameters or dict()
+        self.unset_parameters = unset_parameters or dict()
         self.module = None
-        self.parameters = None
         self.activation_reason = None
 
     def get_child(self, activating_result: str) -> Optional["AbstractTreeElement"]:
@@ -49,6 +62,15 @@ class AbstractTreeElement:
         """Set the result that activated this element"""
         self.activation_reason = reason
 
+    def repr_dict(self) -> dict:
+        """
+        Represent this tree element as dictionary which is JSON encodable
+        """
+        return {
+            "name": self.name,
+            "parameters": self.parameters,
+        }
+
 
 class DecisionTreeElement(AbstractTreeElement):
     """
@@ -62,11 +84,12 @@ class DecisionTreeElement(AbstractTreeElement):
 
         :param name: the class name of the corresponding AbstractDecisionElement
         :param parent: the parent element, None for the root element
+        :param parameters: A dictionary of parameters
+        :param unset_parameters: A dictionary of parameters that must be set later
         :type parent: DecisionTreeElement
         """
-        super().__init__(name, parent)
-        self.parameters = parameters or dict()
-        self.unset_parameters = unset_parameters or dict()
+        # Call the constructor of the superclass
+        super().__init__(name, parent, parameters, unset_parameters)
 
         # Dictionary that maps results of the decision to the corresponding child
         self.children: dict[str, AbstractTreeElement] = dict()
@@ -98,6 +121,17 @@ class DecisionTreeElement(AbstractTreeElement):
     def __str__(self):
         return self.name
 
+    def repr_dict(self) -> dict:
+        """
+        Represent this decision as dictionary which is JSON encodable
+        """
+        # Get the dict from the superclass
+        result = super().repr_dict()
+        # Add additional information
+        result["type"] = "decision"
+        result["children"] = {result: child.repr_dict() for result, child in self.children.items()}
+        return result
+
 
 class SequenceTreeElement(AbstractTreeElement):
     """
@@ -108,7 +142,7 @@ class SequenceTreeElement(AbstractTreeElement):
 
     def __init__(self, parent):
         super().__init__(None, parent)
-        self.action_elements = list()  # type: List[ActionTreeElement]
+        self.action_elements: list[ActionTreeElement] = []
 
     def add_action_element(self, action_element):
         """
@@ -128,6 +162,17 @@ class SequenceTreeElement(AbstractTreeElement):
     def __repr__(self):
         return "({})".format(", ".join(repr(action) for action in self.action_elements))
 
+    def repr_dict(self):
+        """
+        Represent this sequence as dictionary which is JSON encodable
+        """
+        # Get the dict from the superclass
+        result = super().repr_dict()
+        # Add additional information
+        result["type"] = "sequence"
+        result["action_elements"] = [action.repr_dict() for action in self.action_elements]
+        return result
+
 
 class ActionTreeElement(AbstractTreeElement):
     """
@@ -144,9 +189,7 @@ class ActionTreeElement(AbstractTreeElement):
         :param parameters: A dictionary of parameters
         :param unset_parameters: A dictionary of parameters that must be set later
         """
-        super().__init__(name, parent)
-        self.parameters = parameters or dict()
-        self.unset_parameters = unset_parameters or dict()
+        super().__init__(name, parent, parameters, unset_parameters)
         self.in_sequence = False
 
     def __repr__(self):
@@ -154,3 +197,13 @@ class ActionTreeElement(AbstractTreeElement):
 
     def __str__(self):
         return self.name
+
+    def repr_dict(self) -> dict:
+        """
+        Represent this action as dictionary which is JSON encodable
+        """
+        # Get the dict from the superclass
+        result = super().repr_dict()
+        # Add additional information
+        result["type"] = "action"
+        return result
