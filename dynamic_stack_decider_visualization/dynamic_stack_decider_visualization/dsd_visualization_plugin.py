@@ -35,11 +35,11 @@ from typing import Optional
 
 import pydot
 from ament_index_python import get_package_share_directory
-from python_qt_binding import loadUi
-from python_qt_binding.QtCore import Qt
-from python_qt_binding.QtGui import QIcon, QPainter, QStandardItemModel
-from python_qt_binding.QtSvg import QSvgGenerator
-from python_qt_binding.QtWidgets import QFileDialog, QGraphicsScene, QWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon, QPainter, QStandardItemModel
+from PyQt5.QtSvg import QSvgGenerator
+from PyQt5.QtWidgets import QFileDialog, QGraphicsScene, QWidget
+from PyQt5.uic import loadUi
 from qt_dotgraph.dot_to_qt import DotToQtGenerator
 from qt_dotgraph.pydotfactory import PydotFactory
 from rclpy.node import Node

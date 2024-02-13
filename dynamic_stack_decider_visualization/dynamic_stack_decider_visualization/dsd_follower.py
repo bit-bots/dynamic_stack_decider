@@ -3,7 +3,7 @@ import uuid
 from typing import Optional, Union
 
 import pydot
-from python_qt_binding.QtGui import QStandardItem, QStandardItemModel
+from PyQt5.QtGui import QStandardItem, QStandardItemModel
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from std_msgs.msg import String
@@ -254,9 +254,6 @@ class DsdFollower:
     ):
         """
         Appends debug_data of a given element and its children to a QStandardItem.
-
-        :type parent_item: python_qt_binding.QtGui.QStandardItem
-        :type debug_data: dict or list or int or float or str or bool
         """
         if isinstance(debug_data, list):
             for i, data in enumerate(debug_data):
