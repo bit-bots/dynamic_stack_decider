@@ -1,6 +1,10 @@
 from abc import ABCMeta
+from typing import TYPE_CHECKING
 
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
+
+if TYPE_CHECKING:
+    from dynamic_stack_decider.dsd import DSD
 
 
 class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
@@ -14,7 +18,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     If the action is complete, it can remove itself from the stack by performing a pop command.
     """
 
-    def __init__(self, blackboard, dsd, parameters=None):
+    def __init__(self, blackboard, dsd: "DSD", parameters: dict[str, bool | int | float | str]):
         """
         Constructor of the action element
         :param blackboard: Shared blackboard for data exchange between elements
@@ -23,10 +27,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         """
         super().__init__(blackboard, dsd, parameters)
         # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
-        if parameters is not None:
-            self.never_reevaluate = not parameters.get("r", True) or not parameters.get("reevaluate", True)
-        else:
-            self.never_reevaluate = False
+        self.never_reevaluate = not parameters.get("r", True) or not parameters.get("reevaluate", True)
 
     def do_not_reevaluate(self):
         """
@@ -41,6 +42,6 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         """
         return {
             "type": "action",
-            "name": self.__class__.__name__,
+            "name": self.name,
             "debug_data": self._debug_data,
         }

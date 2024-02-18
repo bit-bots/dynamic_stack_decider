@@ -1,4 +1,10 @@
+from typing import TYPE_CHECKING, Optional
+
+from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
+
+if TYPE_CHECKING:
+    from dynamic_stack_decider.dsd import DSD
 
 
 class SequenceElement(AbstractStackElement):
@@ -10,11 +16,11 @@ class SequenceElement(AbstractStackElement):
     This is not an abstract class to inherit from.
     """
 
-    def __init__(self, blackboard, dsd, actions=()):
+    def __init__(self, blackboard, dsd: "DSD", actions: list[AbstractActionElement]):
         """
         :param actions: list of initialized action elements
         """
-        super().__init__(blackboard, dsd)
+        super().__init__(blackboard, dsd, dict())
         self.actions = actions
         self.current_action_index = 0
 
@@ -40,21 +46,17 @@ class SequenceElement(AbstractStackElement):
         return self.current_action_index == len(self.actions) - 1
 
     @property
-    def current_action(self):
+    def current_action(self) -> AbstractActionElement:
         """
         Returns the currently executed action of the sequence element
-
-        :rtype: AbstractActionElement
         """
         return self.actions[self.current_action_index]
 
-    def repr_dict(self):
+    def repr_dict(self) -> dict:
         """
         Represent this stack element as dictionary which is JSON encodable
-
-        :rtype: dict
         """
-        self.publish_debug_data("Active Element", self.current_action.__class__.__name__)
+        self.publish_debug_data("Active Element", self.current_action.name)
         if self.current_action._debug_data:
             self.publish_debug_data("Corresponding debug data", self.current_action._debug_data)
         data = {
