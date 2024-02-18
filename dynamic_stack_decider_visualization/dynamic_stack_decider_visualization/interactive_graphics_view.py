@@ -29,9 +29,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-from python_qt_binding.QtCore import QPointF, QRectF, Qt
-from python_qt_binding.QtGui import QTransform
-from python_qt_binding.QtWidgets import QGraphicsView
+from PyQt5.QtCore import QPointF, QRectF, Qt
+from PyQt5.QtGui import QTransform
+from PyQt5.QtWidgets import QGraphicsView
 
 
 # ruff: noqa: N802
