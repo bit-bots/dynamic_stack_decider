@@ -108,6 +108,7 @@ class DSD:
     stack_reevaluate = False
     do_not_reevaluate = False
     old_representation = ""
+    debug_active_action_cache: Optional[str] = None
 
     def __init__(self, blackboard, debug_topic: str = None, node: Optional[Node] = None):
         """
@@ -376,14 +377,17 @@ class DSD:
             # Check if there is something on the stack
             if len(self.stack) > 0:
                 # Get the top element
-                stack_top = self.stack[-1]
+                stack_top = self.stack[-1][1]
                 # Check if it is an action or a sequence element and retrieve the current action
-                if isinstance(stack_top[1], AbstractActionElement):
-                    current_action = stack_top[0].name
-                elif isinstance(stack_top[1], SequenceElement):
-                    current_action = stack_top[1].current_action
+                if isinstance(stack_top, AbstractActionElement):
+                    current_action = stack_top
+                elif isinstance(stack_top, SequenceElement):
+                    current_action = stack_top.current_action
                 else:
-                    self.node.get_logger().error("Top element is not an action or sequence element")
                     return
-                # Publish the name of the current action
-                self.debug_current_action_publisher.publish(String(data=current_action.name))
+                # Only publish if the action changed
+                if current_action.name != self.debug_active_action_cache:
+                    # Publish the name of the current action
+                    self.debug_current_action_publisher.publish(String(data=current_action.name))
+                    # Cache the current action name
+                    self.debug_active_action_cache = current_action.name
