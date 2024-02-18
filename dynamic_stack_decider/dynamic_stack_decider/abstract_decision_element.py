@@ -26,7 +26,7 @@ class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
         """
         return {
             "type": "decision",
-            "name": self.__class__.__name__,
+            "name": self.name,
             "debug_data": self._debug_data,
         }
 

@@ -196,3 +196,5 @@ ENV/
 **/docs/_out
 **/docs/cppapi
 **/docs/pyapi
+
+.ruff_cache/

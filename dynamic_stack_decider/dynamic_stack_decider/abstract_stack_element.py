@@ -1,7 +1,10 @@
 from abc import ABCMeta, abstractmethod
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from dynamic_stack_decider.logger import get_logger
+
+if TYPE_CHECKING:
+    from dynamic_stack_decider.dsd import DSD
 
 
 class AbstractStackElement(metaclass=ABCMeta):
@@ -12,14 +15,14 @@ class AbstractStackElement(metaclass=ABCMeta):
     Each element which inherits from the AbstractStackElement can be used as a root element on the stack.
     """
 
-    _dsd = None
-    _init_data = None
+    _dsd: "DSD"
+    parameters: dict[str, bool | int | float | str]
 
-    def __init__(self, blackboard, dsd, parameters=None):
+    def __init__(self, blackboard, dsd: "DSD", parameters: dict[str, bool | int | float | str]):
         """
         :param blackboard: Shared blackboard for data exchange between elements
         :param dsd: The stack decider which has this element on its stack.
-        :param parameters: Optional parameters which serve as arguments to this element
+        :param parameters: Parameters which serve as arguments to this element
         """
         self._debug_data = {}
         """
@@ -28,7 +31,15 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
 
         self._dsd = dsd
+        self.parameters = parameters
         self.blackboard = blackboard
+
+    @property
+    def name(self) -> str:
+        """
+        Returns the name of the action
+        """
+        return self.__class__.__name__
 
     def pop(self):
         """
@@ -90,6 +101,6 @@ class AbstractStackElement(metaclass=ABCMeta):
         """Represent this stack element as dictionary which is JSON encodable"""
         return {
             "type": "abstract",
-            "name": self.__class__.__name__,
+            "name": self.name,
             "debug_data": self._debug_data,
         }

@@ -108,6 +108,7 @@ class DSD:
     stack_reevaluate = False
     do_not_reevaluate = False
     old_representation = ""
+    debug_active_action_cache: Optional[str] = None
 
     def __init__(self, blackboard, debug_topic: str = None, node: Optional[Node] = None):
         """
@@ -142,6 +143,10 @@ class DSD:
             debug_stack_topic = f"{debug_topic}/dsd_stack"
             self.debug_stack_publisher = node.create_publisher(String, debug_stack_topic, 10)
             get_logger().debug(f"Debugging stack on '{debug_stack_topic}'")
+            # Publish the currently active action
+            debug_current_action_topic = f"{debug_topic}/dsd_current_action"
+            self.debug_current_action_publisher = node.create_publisher(String, debug_current_action_topic, 10)
+            get_logger().debug(f"Debugging current action on '{debug_current_action_topic}'")
 
     def register_actions(self, module_path):
         """
@@ -196,7 +201,7 @@ class DSD:
         else:
             raise ValueError(f'Unknown parser tree element type "{type(element)}" for element "{element}"!')
 
-    def _init_element(self, element):
+    def _init_element(self, element: AbstractTreeElement):
         """Initializes the module belonging to the given element."""
         if isinstance(element, SequenceTreeElement):
             initialized_actions = list()
@@ -206,7 +211,7 @@ class DSD:
         else:
             return element.module(self.blackboard, self, element.parameters)
 
-    def set_start_element(self, start_element):
+    def set_start_element(self, start_element: AbstractTreeElement):
         """
         This method defines the start element on the stack, which stays always on the bottom of the stack.
         It should be called in __init__.
@@ -236,6 +241,7 @@ class DSD:
         """
         try:
             self.debug_publish_stack()
+            self.debug_publish_current_action()
 
             if reevaluate and not self.do_not_reevaluate:
                 self.stack_exec_index = 0
@@ -362,3 +368,28 @@ class DSD:
             data = self.tree.repr_dict()
             msg = String(data=json.dumps(data))
             self.debug_tree_publisher.publish(msg)
+
+    def debug_publish_current_action(self):
+        """
+        Publishes the name of the currently active action
+        """
+        # Check if debugging is active and if there is something on the stack
+        if not self.debug_active or len(self.stack) == 0:
+            return
+
+        # Get the top element
+        stack_top = self.stack[-1][1]
+        # Check if it is an action or a sequence element and retrieve the current action
+        if isinstance(stack_top, AbstractActionElement):
+            current_action = stack_top
+        elif isinstance(stack_top, SequenceElement):
+            current_action = stack_top.current_action
+        else:
+            return
+
+        # Only publish if the action changed
+        if current_action.name != self.debug_active_action_cache:
+            # Publish the name of the current action
+            self.debug_current_action_publisher.publish(String(data=current_action.name))
+            # Cache the current action name
+            self.debug_active_action_cache = current_action.name
