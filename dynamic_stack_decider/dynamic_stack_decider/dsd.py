@@ -373,21 +373,23 @@ class DSD:
         """
         Publishes the name of the currently active action
         """
-        if self.debug_active:
-            # Check if there is something on the stack
-            if len(self.stack) > 0:
-                # Get the top element
-                stack_top = self.stack[-1][1]
-                # Check if it is an action or a sequence element and retrieve the current action
-                if isinstance(stack_top, AbstractActionElement):
-                    current_action = stack_top
-                elif isinstance(stack_top, SequenceElement):
-                    current_action = stack_top.current_action
-                else:
-                    return
-                # Only publish if the action changed
-                if current_action.name != self.debug_active_action_cache:
-                    # Publish the name of the current action
-                    self.debug_current_action_publisher.publish(String(data=current_action.name))
-                    # Cache the current action name
-                    self.debug_active_action_cache = current_action.name
+        # Check if debugging is active and if there is something on the stack
+        if not self.debug_active or len(self.stack) == 0:
+            return
+
+        # Get the top element
+        stack_top = self.stack[-1][1]
+        # Check if it is an action or a sequence element and retrieve the current action
+        if isinstance(stack_top, AbstractActionElement):
+            current_action = stack_top
+        elif isinstance(stack_top, SequenceElement):
+            current_action = stack_top.current_action
+        else:
+            return
+
+        # Only publish if the action changed
+        if current_action.name != self.debug_active_action_cache:
+            # Publish the name of the current action
+            self.debug_current_action_publisher.publish(String(data=current_action.name))
+            # Cache the current action name
+            self.debug_active_action_cache = current_action.name

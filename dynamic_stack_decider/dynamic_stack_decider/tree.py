@@ -86,7 +86,6 @@ class DecisionTreeElement(AbstractTreeElement):
         :param parent: the parent element, None for the root element
         :param parameters: A dictionary of parameters
         :param unset_parameters: A dictionary of parameters that must be set later
-        :type parent: DecisionTreeElement
         """
         # Call the constructor of the superclass
         super().__init__(name, parent, parameters, unset_parameters)
@@ -185,7 +184,6 @@ class ActionTreeElement(AbstractTreeElement):
         Create a new ActionTreeElement
         :param name: the class name of the corresponding AbstractActionElement
         :param parent: the parent element
-        :type parent: DecisionTreeElement
         :param parameters: A dictionary of parameters
         :param unset_parameters: A dictionary of parameters that must be set later
         """
