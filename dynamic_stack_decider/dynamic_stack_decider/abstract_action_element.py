@@ -23,7 +23,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         Constructor of the action element
         :param blackboard: Shared blackboard for data exchange between elements
         :param dsd: The stack decider which has this element on its stack.
-        :param parameters: Optional parameters which serve as arguments to this element
+        :param parameters: Parameters which serve as arguments to this element
         """
         super().__init__(blackboard, dsd, parameters)
         # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
