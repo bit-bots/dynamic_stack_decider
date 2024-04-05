@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
@@ -22,7 +22,7 @@ class SequenceElement(AbstractStackElement):
         blackboard,
         dsd: "DSD",
         actions: list[ActionTreeElement],
-        init_function: callable[[AbstractTreeElement], AbstractStackElement],
+        init_function: Callable[[AbstractTreeElement], AbstractStackElement],
     ):
         """
         :param blackboard: Shared blackboard for data exchange and code reuse between elements
