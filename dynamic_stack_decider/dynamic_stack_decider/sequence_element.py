@@ -27,7 +27,7 @@ class SequenceElement(AbstractStackElement):
         """
         :param blackboard: Shared blackboard for data exchange and code reuse between elements
         :param dsd: The stack decider which has this element on its stack.
-        :param actions: list of initialized action elements
+        :param actions: list of of action tree elements / blueprints for the actions
         :param init_function: A function that initializes an action element creating a stack element from a tree element
         """
         super().__init__(blackboard, dsd, dict())
