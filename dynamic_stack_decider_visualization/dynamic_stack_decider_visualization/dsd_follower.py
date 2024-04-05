@@ -182,7 +182,7 @@ class DsdFollower:
                 # Spaces for indentation
                 action_label = "  "
                 # Mark current element (if this sequence is on the stack)
-                if stack_element is not None and i == stack_element["current_action_id"]:
+                if stack_element is not None and i == stack_element["current_action_index"]:
                     action_label += "--> "
                 action_label += action["name"] + param_string(action["parameters"])
                 label.append(action_label)
@@ -327,7 +327,7 @@ class DsdFollower:
             # Set the text of the item
             if stack_element["type"] == "sequence":
                 # Get the names of all actions
-                action_names = [element["name"] for element in stack_element["content"]]
+                action_names = [element["name"] for element in stack_element["current_action"]]
                 # Join them together and set the text
                 elem_item.setText("Sequence: " + ", ".join(action_names))
             else:
