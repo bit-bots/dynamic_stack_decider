@@ -182,7 +182,7 @@ class DsdFollower:
                 # Spaces for indentation
                 action_label = "  "
                 # Mark current element (if this sequence is on the stack)
-                if stack_element is not None and i == stack_element["current_action_id"]:
+                if stack_element is not None and i == stack_element["current_action_index"]:
                     action_label += "--> "
                 action_label += action["name"] + param_string(action["parameters"])
                 label.append(action_label)
@@ -312,6 +312,9 @@ class DsdFollower:
         # Start with the root/bottom of the stack
         stack_element = self.stack
 
+        # Store the corresponding tree element
+        tree_element = self.tree
+
         # Go through all stack elements
         while stack_element is not None:
             # Sanity check
@@ -327,7 +330,7 @@ class DsdFollower:
             # Set the text of the item
             if stack_element["type"] == "sequence":
                 # Get the names of all actions
-                action_names = [element["name"] for element in stack_element["content"]]
+                action_names = [action["name"] for action in tree_element["action_elements"]]
                 # Join them together and set the text
                 elem_item.setText("Sequence: " + ", ".join(action_names))
             else:
@@ -351,6 +354,9 @@ class DsdFollower:
 
             # Go to next element
             stack_element = stack_element["next"]
+            # Also select the corresponding tree element if there are any
+            if "children" in tree_element and stack_element is not None:
+                tree_element = tree_element["children"][stack_element["activation_reason"]]
 
         return model
 

@@ -201,13 +201,10 @@ class DSD:
         else:
             raise ValueError(f'Unknown parser tree element type "{type(element)}" for element "{element}"!')
 
-    def _init_element(self, element: AbstractTreeElement):
+    def _init_element(self, element: AbstractTreeElement) -> AbstractStackElement:
         """Initializes the module belonging to the given element."""
         if isinstance(element, SequenceTreeElement):
-            initialized_actions = list()
-            for action in element.action_elements:
-                initialized_actions.append(action.module(self.blackboard, self, action.parameters))
-            return SequenceElement(self.blackboard, self, initialized_actions)
+            return SequenceElement(self.blackboard, self, element.action_elements, self._init_element)
         else:
             return element.module(self.blackboard, self, element.parameters)
 
