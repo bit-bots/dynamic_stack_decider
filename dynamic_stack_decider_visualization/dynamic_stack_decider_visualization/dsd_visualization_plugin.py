@@ -146,7 +146,7 @@ class DsdVizPlugin(Plugin):
         for topic_name, topic_types in topics:
             if topic_name.endswith("/dsd_tree") and "std_msgs/msg/String" in topic_types:
                 # Extract the dsd name from the topic name
-                dsd_name = topic_name.split("/")[-2].upper()
+                dsd_name = "/".join(topic_name.split("/")[:-1]).upper()
                 # Store the dsd name and the debug topic namespace (not just the tree topic)
                 dsd_instances[dsd_name] = topic_name.replace("/dsd_tree", "")
 
