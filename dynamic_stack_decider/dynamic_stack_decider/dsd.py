@@ -259,7 +259,8 @@ class DSD:
                         elif result != self.stack[self.stack_exec_index + 1][0].activation_reason:
                             # In this case, however, the activation reason actually did change. Therefore, we have to
                             # discard everything in the stack above the current decision and push the new result.
-                            self.stack = self.stack[0 : self.stack_exec_index + 1]
+                            for _ in range(self.stack_exec_index + 1, len(self.stack)):
+                                self.stack.pop()[1].on_pop()
                             self.stack_reevaluate = False
                             self.push(tree_element.get_child(result))
 
@@ -309,8 +310,9 @@ class DSD:
             if self.stack_reevaluate:
                 # we are currently reevaluating. we shorten the stack here
                 if self.stack_exec_index > 0:
-                    # only shorten stack if it still has one element
-                    self.stack = self.stack[0 : self.stack_exec_index]
+                    ## only shorten stack if it still has one element
+                    for _ in range(self.stack_exec_index, len(self.stack)):
+                        self.stack.pop()[1].on_pop()
                 # stop reevaluating
                 self.stack_reevaluate = False
             else:
@@ -321,10 +323,10 @@ class DSD:
                         # only a single element of the sequence
                         # We also do not want to reset do_not_reevaluate because an action in the sequence
                         # may control the stack beyond its own lifetime but in the sequence element's lifetime
-                        self.stack[-1][1].pop_one()
+                        self.stack[-1][1].pop_one().on_pop()
                         return
                 # Remove the last element of the stack
-                self.stack.pop()
+                self.stack.pop()[1].on_pop()
 
             # We will reevaluate even when the popped element set do_not_reevaluate
             # because no module should control the stack beyond its lifetime

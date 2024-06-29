@@ -52,6 +52,14 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         self._dsd.pop()
 
+    def on_pop(self):  # noqa
+        """
+        This method is called when the element is popped from the stack.
+        It can be used to clean up resources, cancel actions or similar tasks.
+        Overload this method if you need to do something when the element is popped.
+        """
+        pass
+
     @abstractmethod
     def perform(self, reevaluate=False):
         """

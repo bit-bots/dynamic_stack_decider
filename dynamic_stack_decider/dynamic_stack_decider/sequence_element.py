@@ -63,11 +63,22 @@ class SequenceElement(AbstractStackElement):
         assert not self.in_last_element(), (
             "It is not possible to pop a single element when" "the last element of the sequence is active"
         )
+        # Save the current action to return it
+        popped_action = self.current_action
         # Increment the index to the next action and initialize it
         self.current_action_index += 1
-        # We initilize the current action here to avoid the problem described in
+        # We initialize the current action here to avoid the problem described in
         # https://github.com/bit-bots/dynamic_stack_decider/issues/107
         self.current_action = self._init_function(self.actions[self.current_action_index])
+        # Return the popped action
+        return popped_action
+
+    def on_pop(self):
+        """
+        This method is called when the sequence is popped from the stack.
+        This means that the last element of the sequence was also popped, so
+        """
+        self.current_action.on_pop()
 
     def in_last_element(self):
         """Returns if the current element is the last element of the sequence"""
