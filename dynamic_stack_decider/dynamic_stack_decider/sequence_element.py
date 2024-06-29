@@ -73,6 +73,13 @@ class SequenceElement(AbstractStackElement):
         # Return the popped action
         return popped_action
 
+    def on_pop(self):
+        """
+        This method is called when the sequence is popped from the stack.
+        This means that the last element of the sequence was also popped, so 
+        """
+        self.current_action.on_pop()
+
     def in_last_element(self):
         """Returns if the current element is the last element of the sequence"""
         return self.current_action_index == len(self.actions) - 1

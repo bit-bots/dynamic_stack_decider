@@ -259,7 +259,8 @@ class DSD:
                         elif result != self.stack[self.stack_exec_index + 1][0].activation_reason:
                             # In this case, however, the activation reason actually did change. Therefore, we have to
                             # discard everything in the stack above the current decision and push the new result.
-                            self.stack = self.stack[0 : self.stack_exec_index + 1]
+                            for _ in range(self.stack_exec_index + 1, len(self.stack)):
+                                self.stack.pop()[1].on_pop()
                             self.stack_reevaluate = False
                             self.push(tree_element.get_child(result))
 
