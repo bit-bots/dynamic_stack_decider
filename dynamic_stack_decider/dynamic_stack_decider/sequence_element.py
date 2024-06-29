@@ -76,7 +76,7 @@ class SequenceElement(AbstractStackElement):
     def on_pop(self):
         """
         This method is called when the sequence is popped from the stack.
-        This means that the last element of the sequence was also popped, so 
+        This means that the last element of the sequence was also popped, so
         """
         self.current_action.on_pop()
 
