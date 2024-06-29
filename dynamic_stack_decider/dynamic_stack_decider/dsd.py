@@ -311,7 +311,7 @@ class DSD:
                 if self.stack_exec_index > 0:
                     ## only shorten stack if it still has one element
                     for _ in range(self.stack_exec_index, len(self.stack)):
-                        self.stack.pop().on_pop()
+                        self.stack.pop()[1].on_pop()
                 # stop reevaluating
                 self.stack_reevaluate = False
             else:
@@ -325,7 +325,7 @@ class DSD:
                         self.stack[-1][1].pop_one().on_pop()
                         return
                 # Remove the last element of the stack
-                self.stack.pop().on_pop()
+                self.stack.pop()[1].on_pop()
 
             # We will reevaluate even when the popped element set do_not_reevaluate
             # because no module should control the stack beyond its lifetime
