@@ -5,7 +5,7 @@ import pkgutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
@@ -26,7 +26,7 @@ from dynamic_stack_decider.tree import (
 )
 
 
-def discover_elements(path: str) -> Dict[str, AbstractStackElement]:
+def discover_elements(path: str) -> dict[str, AbstractStackElement]:
     """
     Extract all the classes from the files in the given path and return a dictionary containing them
 
@@ -122,10 +122,10 @@ class DSD:
         self.tree: Optional[Tree] = None
         # The stack is implemented as a list of tuples consisting of the tree element
         # and the actual module instance
-        self.stack: List[Tuple[AbstractTreeElement, AbstractStackElement]] = []
+        self.stack: list[tuple[AbstractTreeElement, AbstractStackElement]] = []
 
-        self.actions: Dict[str, AbstractActionElement] = {}
-        self.decisions: Dict[str, AbstractDecisionElement] = {}
+        self.actions: dict[str, AbstractActionElement] = {}
+        self.decisions: dict[str, AbstractDecisionElement] = {}
 
         # Check if debugging is active
         self.debug_active = debug_topic is not None

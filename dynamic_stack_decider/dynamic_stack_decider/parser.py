@@ -242,7 +242,7 @@ class DsdParser:
         Create a new sequence element
 
         :param actions: The names of actions in the sequence
-        :type actions: List[str]
+        :type actions: list[str]
         :param parent: The parent element of the sequence
         :type parent: AbstractDecisionElement
         :param lnr: Line number of the current line (used for error messages)
