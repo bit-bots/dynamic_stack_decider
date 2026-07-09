@@ -5,7 +5,7 @@ from typing import Optional
 import yaml
 from rclpy.node import Node
 
-from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, SequenceTreeElement, Tree
+from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, Tree
 
 
 class DsdParser:
@@ -126,12 +126,11 @@ class DsdParser:
                                 to_evaluate = [subtree_copy]
                                 while len(to_evaluate) > 0:
                                     current = to_evaluate.pop(0)
-                                    if isinstance(current, SequenceTreeElement):
-                                        # For sequence elements, only evaluate the actions
-                                        to_evaluate.extend(current.action_elements)
-                                        continue
-                                    elif isinstance(current, DecisionTreeElement):
+                                    if isinstance(current, DecisionTreeElement):
                                         to_evaluate.extend(current.children.values())
+                                    elif isinstance(current, ActionTreeElement) and current.next_element is not None:
+                                        # Follow the chain of actions (i.e. a sequence)
+                                        to_evaluate.append(current.next_element)
 
                                     for name, reference in current.unset_parameters.items():
                                         if reference in parameters:
@@ -223,7 +222,7 @@ class DsdParser:
         The method derives the type (Action/Decision) and optional parameters from the token
         :param token: the string describing the element in the dsd description
         :param parent: the parent element of the new element, None for root
-        :type parent: Union[DecisionTreeElement, SequenceTreeElement]
+        :type parent: Union[DecisionTreeElement, ActionTreeElement]
         :param lnr: Line number of the current line (used for error messages)
         :type lnr: int
         :return: a TreeElement containing the information given in token
@@ -239,7 +238,7 @@ class DsdParser:
 
     def _create_sequence_element(self, actions, parent, lnr):
         """
-        Create a new sequence element
+        Create a sequence as a chain of action elements linked via ``next_element``
 
         :param actions: The names of actions in the sequence
         :type actions: list[str]
@@ -247,15 +246,22 @@ class DsdParser:
         :type parent: AbstractDecisionElement
         :param lnr: Line number of the current line (used for error messages)
         :type lnr: int
-        :return: The sequence element
+        :return: The head action element of the chain
         """
-        sequence_element = SequenceTreeElement(parent)
+        head = None
+        previous = None
         for action in actions:
-            element = self._create_tree_element(action, sequence_element, lnr)
+            # The parent of the head is the given parent, every following action is
+            # parented to its predecessor in the chain
+            element = self._create_tree_element(action, parent if previous is None else previous, lnr)
             if not isinstance(element, ActionTreeElement):
                 raise ParseError("In a sequence, only actions are allowed!")
-            sequence_element.add_action_element(element)
-        return sequence_element
+            if previous is None:
+                head = element
+            else:
+                previous.next_element = element
+            previous = element
+        return head
 
 
 class ParseError(AssertionError):

@@ -3,7 +3,7 @@ import os
 import pytest
 
 from dynamic_stack_decider.parser import DsdParser, Tree
-from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, SequenceTreeElement
+from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement
 
 
 @pytest.fixture()
@@ -68,15 +68,13 @@ def test_sub_behavior(dsd_tree: Tree):
 
 
 def test_sequence_element(dsd_tree: Tree):
-    sequence_element = dsd_tree.root_element.get_child("SEQUENCE")
-    assert isinstance(sequence_element, SequenceTreeElement)
-    assert len(sequence_element.action_elements) == 2
-    first_action = sequence_element.action_elements[0]
-    assert first_action.name == "FirstAction"
+    first_action = dsd_tree.root_element.get_child("SEQUENCE")
     assert isinstance(first_action, ActionTreeElement)
-    second_action = sequence_element.action_elements[1]
-    assert second_action.name == "SecondAction"
+    assert first_action.name == "FirstAction"
+    second_action = first_action.next_element
     assert isinstance(second_action, ActionTreeElement)
+    assert second_action.name == "SecondAction"
+    assert second_action.next_element is None
 
 
 def test_action_parameters(dsd_tree: Tree):
@@ -132,8 +130,8 @@ def test_parameter_subbehavior(dsd_tree: Tree):
     first_action = parameter_subbehavior_decision.get_child("FIRST")
     assert first_action.parameters == {"key": "value1"}
     action_sequence = parameter_subbehavior_decision.get_child("SECOND")
-    assert action_sequence.action_elements[0].parameters == {"key": "value2"}
-    assert action_sequence.action_elements[1].parameters == {"key": "value2"}
+    assert action_sequence.parameters == {"key": "value2"}
+    assert action_sequence.next_element.parameters == {"key": "value2"}
 
 
 def test_nested_parameter_subbehavior(dsd_tree: Tree):
@@ -142,12 +140,12 @@ def test_nested_parameter_subbehavior(dsd_tree: Tree):
     first_action = inner_subbehavior_decision.get_child("FIRST")
     assert first_action.parameters == {"key": "nested1"}
     action_sequence = inner_subbehavior_decision.get_child("SECOND")
-    assert action_sequence.action_elements[0].parameters == {"key": "nested2"}
-    assert action_sequence.action_elements[1].parameters == {"key": "nested2"}
+    assert action_sequence.parameters == {"key": "nested2"}
+    assert action_sequence.next_element.parameters == {"key": "nested2"}
 
 
 def test_sequence_tree(dsd_tree: Tree):
     sequence_tree = dsd_tree.root_element.get_child("SEQUENCE_TREE")
-    assert isinstance(sequence_tree, SequenceTreeElement)
-    assert sequence_tree.action_elements[0].name == "FirstAction"
-    assert sequence_tree.action_elements[1].name == "SecondAction"
+    assert isinstance(sequence_tree, ActionTreeElement)
+    assert sequence_tree.name == "FirstAction"
+    assert sequence_tree.next_element.name == "SecondAction"
