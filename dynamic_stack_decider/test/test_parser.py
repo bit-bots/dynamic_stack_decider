@@ -35,6 +35,8 @@ def test_possible_results(dsd_tree: Tree):
         "PARAMETER_SUBBEHAVIOR",
         "NESTED_PARAMETER_SUBBEHAVIOR",
         "SEQUENCE_TREE",
+        "DECISION_AFTER_ACTION",
+        "SUBTREE_AFTER_ACTION",
     }
 
 
@@ -149,3 +151,33 @@ def test_sequence_tree(dsd_tree: Tree):
     assert isinstance(sequence_tree, ActionTreeElement)
     assert sequence_tree.name == "FirstAction"
     assert sequence_tree.next_element.name == "SecondAction"
+
+
+def test_decision_after_action(dsd_tree: Tree):
+    # An action may be followed by a decision (@FirstAction, $ThirdDecision)
+    head = dsd_tree.root_element.get_child("DECISION_AFTER_ACTION")
+    assert isinstance(head, ActionTreeElement)
+    assert head.name == "FirstAction"
+
+    decision = head.next_element
+    assert isinstance(decision, DecisionTreeElement)
+    assert decision.name == "ThirdDecision"
+    # The decision keeps the activation reason of the chain it belongs to
+    assert decision.activation_reason == "DECISION_AFTER_ACTION"
+    # The decision gets its children from the following indented lines
+    assert decision.get_child("FIRST").name == "FirstAction"
+    assert decision.get_child("SECOND").name == "SecondAction"
+
+
+def test_subtree_after_action(dsd_tree: Tree):
+    # An action may be followed by a subtree (@FirstAction, #SubBehavior)
+    head = dsd_tree.root_element.get_child("SUBTREE_AFTER_ACTION")
+    assert isinstance(head, ActionTreeElement)
+    assert head.name == "FirstAction"
+
+    # SubBehavior has ThirdDecision as its root
+    subtree_root = head.next_element
+    assert isinstance(subtree_root, DecisionTreeElement)
+    assert subtree_root.name == "ThirdDecision"
+    assert subtree_root.get_child("FIRST").name == "FirstAction"
+    assert subtree_root.get_child("SECOND").name == "SecondAction"
