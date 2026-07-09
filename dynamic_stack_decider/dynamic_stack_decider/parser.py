@@ -133,7 +133,7 @@ class DsdParser:
 
                         else:
                             raise ParseError(
-                                f"Error parsing line {lnr}: " f"Element {call} is neither an action nor a decision"
+                                f"Error parsing line {lnr}: Element {call} is neither an action nor a decision"
                             )
 
                     else:
@@ -174,7 +174,7 @@ class DsdParser:
 
             if " " in parameter_value:
                 raise ParseError(
-                    f"Error parsing line {lnr}: Parameter values should not contain spaces. " "Did you forget a comma?"
+                    f"Error parsing line {lnr}: Parameter values should not contain spaces. Did you forget a comma?"
                 )
 
             if parameter_value.startswith("%"):
@@ -313,9 +313,7 @@ class DsdParser:
                 elif reference in unset_parameters:
                     current.unset_parameters[name] = unset_parameters[reference]
                 else:
-                    raise ParseError(
-                        f"Error evaluating subtree call in line {lnr}: Unknown reference to {reference}."
-                    )
+                    raise ParseError(f"Error evaluating subtree call in line {lnr}: Unknown reference to {reference}.")
 
 
 class ParseError(AssertionError):

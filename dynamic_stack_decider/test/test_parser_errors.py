@@ -59,38 +59,20 @@ def test_subtree_not_defined():
 
 def test_subtree_invalid_parameters():
     with pytest.raises(ParseError, match="Invalid parameters specified"):
-        parse(
-            "#Sub + key1\n"
-            "@FirstAction + p:*key1\n"
-            "-->T\n"
-            "$Chooser\n"
-            "    GO --> #Sub + wrongkey:value\n"
-        )
+        parse("#Sub + key1\n@FirstAction + p:*key1\n-->T\n$Chooser\n    GO --> #Sub + wrongkey:value\n")
 
 
 def test_subtree_unknown_reference():
     with pytest.raises(ParseError, match="Unknown reference"):
         parse(
             # The subtree declares parameter 'key1' but the action references the unknown '*missing'
-            "#Sub + key1\n"
-            "@FirstAction + p:*missing\n"
-            "-->T\n"
-            "$Chooser\n"
-            "    GO --> #Sub + key1:value\n"
+            "#Sub + key1\n@FirstAction + p:*missing\n-->T\n$Chooser\n    GO --> #Sub + key1:value\n"
         )
 
 
 def test_subtree_used_as_root_of_another_subtree():
     # When a subtree body starts by referencing another subtree, that subtree becomes its root
-    tree = parse(
-        "#Inner\n"
-        "@FirstAction\n"
-        "#Outer\n"
-        "FOO --> #Inner\n"
-        "-->T\n"
-        "$Chooser\n"
-        "    GO --> #Outer\n"
-    )
+    tree = parse("#Inner\n@FirstAction\n#Outer\nFOO --> #Inner\n-->T\n$Chooser\n    GO --> #Outer\n")
     assert tree.root_element.get_child("GO").name == "FirstAction"
 
 

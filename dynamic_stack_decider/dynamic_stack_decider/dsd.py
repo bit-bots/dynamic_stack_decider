@@ -307,7 +307,10 @@ class DSD:
                 self.stack_reevaluate = False
             else:
                 current_tree_element = self.stack[-1][0]
-                if isinstance(current_tree_element, ActionTreeElement) and current_tree_element.next_element is not None:
+                if (
+                    isinstance(current_tree_element, ActionTreeElement)
+                    and current_tree_element.next_element is not None
+                ):
                     # This action is part of a chain (e.g. a sequence). Instead of returning to the
                     # element below, we advance to the next element in the chain.
                     # We do not reset do_not_reevaluate because an action in the chain may control
