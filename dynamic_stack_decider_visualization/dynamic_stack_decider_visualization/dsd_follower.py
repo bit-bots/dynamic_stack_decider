@@ -190,13 +190,13 @@ class DsdFollower:
     @staticmethod
     def _stack_matches_tree(stack_element: Optional[dict], tree_element: dict) -> bool:
         """
-        Check whether a stack element corresponds to a given tree element (same type and name)
+        Check whether a stack element corresponds to a given tree element.
+
+        Matching is done via the stable ``id`` of the tree element rather than the name, because a
+        chain (i.e. a sequence) may contain multiple elements with the same name (e.g.
+        ``@Wait, @SomeAction, @Wait``) and we need to know exactly which one is active.
         """
-        return (
-            stack_element is not None
-            and stack_element["type"] == tree_element["type"]
-            and stack_element["name"] == tree_element["name"]
-        )
+        return stack_element is not None and stack_element["id"] == tree_element["id"]
 
     def _stack_to_dotgraph(
         self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None, full_tree: bool = False
@@ -243,12 +243,9 @@ class DsdFollower:
         # Append the successor of a chain (e.g. the next action of a sequence) if it exists.
         # We render the whole chain if any element of it is on the stack or if the whole tree is requested.
         if subtree_root.get("next") is not None and (stack_root is not None or full_tree):
-            # The active stack element is only passed further down the chain if it does not correspond to this
-            # node. Otherwise the successor is not (yet) on the stack and is therefore rendered as inactive.
-            successor_stack_root = None if node_stack is not None else stack_root
-
-            # Recursively generate dot nodes for the successor
-            dot, next_uid = self._stack_to_dotgraph(dot, subtree_root["next"], successor_stack_root, full_tree)
+            # We pass the same active stack element down the whole chain. Only the element it actually
+            # corresponds to (matched via its id) is rendered as active; all others are rendered inactive.
+            dot, next_uid = self._stack_to_dotgraph(dot, subtree_root["next"], stack_root, full_tree)
             # Connect the successor to this element
             dot.add_edge(pydot.Edge(src=dot_node.get_name(), dst=next_uid))
         return dot, dot_node.get_name()

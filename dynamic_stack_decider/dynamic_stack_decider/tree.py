@@ -67,6 +67,10 @@ class AbstractTreeElement:
         Represent this tree element as dictionary which is JSON encodable
         """
         return {
+            # A stable identifier for this tree element. It is used to match a stack element to the
+            # exact tree element it belongs to, which is required because a chain (i.e. a sequence)
+            # may contain multiple elements with the same name (e.g. @Wait, @SomeAction, @Wait).
+            "id": id(self),
             "name": self.name,
             "parameters": self.parameters,
         }

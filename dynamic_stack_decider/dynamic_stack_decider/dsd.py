@@ -343,6 +343,9 @@ class DSD:
             for tree_elem, elem_instance in reversed(self.stack):
                 elem_data = elem_instance.repr_dict()
                 elem_data["activation_reason"] = tree_elem.activation_reason
+                # Attach the id of the corresponding tree element so the visualization can match this
+                # stack element to the exact tree element (names alone are ambiguous within a chain).
+                elem_data["id"] = id(tree_elem)
                 elem_data["next"] = data
                 data = elem_data
 
