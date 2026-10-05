@@ -1,6 +1,5 @@
 import json
 import uuid
-from typing import Optional, Union
 
 import pydot
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
@@ -27,10 +26,10 @@ class DsdFollower:
 
         self.dsd_debug_topic = debug_topic
 
-        self.tree: Optional[dict] = None
-        self.stack: Optional[dict] = None
+        self.tree: dict | None = None
+        self.stack: dict | None = None
 
-        self._cached_dotgraph: Optional[pydot.Dot] = None
+        self._cached_dotgraph: pydot.Dot | None = None
 
         # Subscribe to the DSDs tree (latched)
         dsd_tree_topic = f"{debug_topic}/dsd_tree"
@@ -78,7 +77,7 @@ class DsdFollower:
         """
         Check if two stack dicts are different
         """
-        if type(old_stack_element) != type(new_stack_element):
+        if type(old_stack_element) is not type(new_stack_element):
             return True
         elif isinstance(old_stack_element, dict):
             # Check if the length of the stack changed
@@ -136,7 +135,7 @@ class DsdFollower:
         return QStandardItemModel()
 
     @staticmethod
-    def _dot_node_from_tree_element(tree_element: dict, stack_element: Optional[dict] = None) -> pydot.Node:
+    def _dot_node_from_tree_element(tree_element: dict, stack_element: dict | None = None) -> pydot.Node:
         """
         :param tree_element: The node from the dsd tree which should be converted to a dot node
         :param stack_element: The corresponding element from the stack
@@ -159,12 +158,12 @@ class DsdFollower:
 
         # Sanity check
         if stack_element is not None:
-            assert (
-                stack_element["type"] == tree_element["type"]
-            ), f"The stack and the tree do not match (element type mismatch: {stack_element['type']} vs. {tree_element['type']})"
-            assert (
-                stack_element["name"] == tree_element["name"]
-            ), f"The stack and the tree do not match (element name mismatch: {stack_element['name']} vs. {tree_element['name']})"
+            assert stack_element["type"] == tree_element["type"], (
+                f"The stack and the tree do not match (element type mismatch: {stack_element['type']} vs. {tree_element['type']})"
+            )
+            assert stack_element["name"] == tree_element["name"], (
+                f"The stack and the tree do not match (element name mismatch: {stack_element['name']} vs. {tree_element['name']})"
+            )
 
         # Initialize parameters of the dot node we are going to create
         dot_node_params = {
@@ -188,7 +187,7 @@ class DsdFollower:
         return pydot.Node(**dot_node_params)
 
     @staticmethod
-    def _stack_matches_tree(stack_element: Optional[dict], tree_element: dict) -> bool:
+    def _stack_matches_tree(stack_element: dict | None, tree_element: dict) -> bool:
         """
         Check whether a stack element corresponds to a given tree element.
 
@@ -199,7 +198,7 @@ class DsdFollower:
         return stack_element is not None and stack_element["id"] == tree_element["id"]
 
     def _stack_to_dotgraph(
-        self, dot: pydot.Dot, subtree_root: dict, stack_root: Optional[dict] = None, full_tree: bool = False
+        self, dot: pydot.Dot, subtree_root: dict, stack_root: dict | None = None, full_tree: bool = False
     ) -> (pydot.Dot, str):
         """
         Recursively modify dot to include every element of the stack
@@ -251,7 +250,7 @@ class DsdFollower:
         return dot, dot_node.get_name()
 
     def _append_debug_data_to_item(
-        self, parent_item: QStandardItem, debug_data: Union[dict, list, int, float, str, bool]
+        self, parent_item: QStandardItem, debug_data: dict | list | int | float | str | bool
     ):
         """
         Appends debug_data of a given element and its children to a QStandardItem.

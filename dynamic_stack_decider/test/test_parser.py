@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from dynamic_stack_decider.parser import DsdParser, Tree
 from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement
 

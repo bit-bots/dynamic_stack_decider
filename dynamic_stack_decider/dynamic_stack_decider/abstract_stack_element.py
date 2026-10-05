@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from dynamic_stack_decider.logger import get_logger
 
@@ -68,7 +68,7 @@ class AbstractStackElement(metaclass=ABCMeta):
 
         :param reevaluate: True if the current method call is a reevaluate of the state. Meaning the module is not on top of the stack.
         """
-        msg = "You should override perform() in %s" % self.__class__.__name__
+        msg = f"You should override perform() in {self.__class__.__name__}"
         raise NotImplementedError(msg)
 
     def interrupt(self):
@@ -77,7 +77,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         self._dsd.interrupt()
 
-    def publish_debug_data(self, label: str, data: Union[dict, list, int, float, str, bool]):
+    def publish_debug_data(self, label: str, data: dict | list | int | float | str | bool):
         """
         Publish debug data. Can be viewed using the DSD visualization
 

@@ -10,7 +10,6 @@ decisions and subtrees following actions, error handling and the debug publishin
 import json
 
 import pytest
-
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
 

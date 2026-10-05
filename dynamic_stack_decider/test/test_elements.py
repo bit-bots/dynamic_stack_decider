@@ -5,7 +5,6 @@ the delegation of ``pop`` / ``interrupt`` / ``do_not_reevaluate`` to the DSD.
 """
 
 import pytest
-
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 from .runtime_elements import Blackboard, Chooser, Guard, Idle
