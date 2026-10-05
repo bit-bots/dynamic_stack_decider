@@ -50,6 +50,8 @@ class AbstractTreeElement(Generic[BlackboardT]):
         parameters: Parameters | None = None,
         unset_parameters: ParameterReferences | None = None,
     ) -> None:
+        self.source_file: str | None = None
+        self.source_line: int | None = None
         self.name = name
         self.parent = parent
         self.parameters = parameters or dict()
