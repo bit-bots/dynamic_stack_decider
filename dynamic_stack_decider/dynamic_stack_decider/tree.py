@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING, Generic
 
 from dynamic_stack_decider.types import BlackboardT, ParameterReferences, Parameters, TreeData
@@ -121,9 +120,8 @@ class DecisionTreeElement(AbstractTreeElement[BlackboardT]):
 
     def get_child(self, activating_result: str | None) -> AbstractTreeElement[BlackboardT]:
         """Get the child for a given result"""
-        if not activating_result:
-            # give advice about error
-            sys.exit("Decision return was None. You probably forgot to return a string in your perform method.")
+        if not isinstance(activating_result, str) or not activating_result:
+            raise ValueError(f"Decision {self.name!r} must return a non-empty string, got {activating_result!r}")
 
         if activating_result in self.children.keys():
             return self.children[activating_result]

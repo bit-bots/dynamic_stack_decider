@@ -69,3 +69,38 @@ def test_register_decisions_filters_to_decisions():
     # Actions are filtered out
     assert "FixtureActionA" not in dsd.decisions
     assert all(issubclass(cls, AbstractDecisionElement) for cls in dsd.decisions.values())
+
+
+def test_init_file_discovery_does_not_require_existing_sys_path(tmp_path):
+    import sys
+
+    package = tmp_path / "dsd_unique_fixture_package"
+    package.mkdir()
+    path = package / "__init__.py"
+    path.write_text(
+        "from dynamic_stack_decider import AbstractActionElement\n"
+        "class DiscoveredAction(AbstractActionElement):\n"
+        "    def perform(self, reevaluate=False): pass\n"
+    )
+    original_path = list(sys.path)
+    try:
+        assert "DiscoveredAction" in discover_elements(path)
+        assert sys.path == original_path
+    finally:
+        sys.modules.pop(package.name, None)
+
+
+def test_discovery_restores_sys_path_if_package_walk_fails(monkeypatch):
+    import sys
+
+    import dynamic_stack_decider.dsd as runtime
+
+    original_path = list(sys.path)
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("package walk failed")
+
+    monkeypatch.setattr(runtime.pkgutil, "walk_packages", fail)
+    with pytest.raises(RuntimeError, match="package walk failed"):
+        discover_elements(FIXTURES)
+    assert sys.path == original_path

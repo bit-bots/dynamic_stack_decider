@@ -1,6 +1,9 @@
+"""Shared lifecycle and debugging helpers for actions and decisions."""
+
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod
+import json
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Generic
 
 from dynamic_stack_decider.logger import get_logger
@@ -10,108 +13,44 @@ if TYPE_CHECKING:
     from dynamic_stack_decider.dsd import DSD
 
 
-class AbstractStackElement(Generic[BlackboardT], metaclass=ABCMeta):
-    """
-    The AbstractStackElement is the basis of all elements on the stack.
-    It provides some help functions which should not be overloaded.
-    The work of an element is done in the :func:`perform`.
-    Each element which inherits from the AbstractStackElement can be used as a root element on the stack.
-    """
-
-    _dsd: DSD[BlackboardT]
-    parameters: Parameters
-
+class AbstractStackElement(Generic[BlackboardT], ABC):
     def __init__(self, blackboard: BlackboardT, dsd: DSD[BlackboardT], parameters: Parameters) -> None:
-        """
-        :param blackboard: Shared blackboard for data exchange between elements
-        :param dsd: The stack decider which has this element on its stack.
-        :param parameters: Parameters which serve as arguments to this element
-        """
-        self._debug_data: dict[str, object] = {}
-        """
-        This is a dict in which data can be saved that should get represented on a __repr__ call.
-        It can be set using publish_debug_data()
-        """
-
         self._dsd = dsd
-        self.parameters = parameters
         self.blackboard = blackboard
+        self.parameters = parameters
+        self._debug_data: dict[str, object] = {}
 
     @property
     def name(self) -> str:
-        """
-        Returns the name of the action
-        """
-        return self.__class__.__name__
+        return type(self).__name__
 
     def pop(self) -> None:
-        """
-        Help method which pops the element of the stack.
-
-        This method should always be called with a return:
-            return self.pop()
-
-        If no return is used, further code is executed after the pop, which leads to difficult to debug behavior.
-        """
+        """Complete this frame. Return immediately afterward to avoid using a discarded instance."""
         self._dsd.pop()
 
     def on_pop(self) -> None:
-        """
-        This method is called when the element is popped from the stack.
-        It can be used to clean up resources, cancel actions or similar tasks.
-        Overload this method if you need to do something when the element is popped.
-        """
-        pass
+        """Release resources when completed, preempted, interrupted, or replaced by another behavior."""
 
     @abstractmethod
     def perform(self, reevaluate: bool = False) -> str | None:
-        """
-        This method is called when the element is on top of the stack.
-        This method has to be overloaded by the implementation!
-
-        :param reevaluate: True if the current method call is a reevaluate of the state. Meaning the module is not on top of the stack.
-        """
-        msg = f"You should override perform() in {self.__class__.__name__}"
-        raise NotImplementedError(msg)
+        """Execute the element, or check a decision during reevaluation."""
+        raise NotImplementedError(f"Implement perform() in {self.name}")
 
     def interrupt(self) -> None:
-        """
-        An interrupt leads to a complete clearing of the stack.
-        """
+        """Restart the behavior. Return immediately afterward."""
         self._dsd.interrupt()
 
     def publish_debug_data(self, label: str, data: object) -> None:
-        """
-        Publish debug data. Can be viewed using the DSD visualization
-
-        This method is safe to call without wrapping it in a try-catch block although invalid values will
-        be wrapped in a `str()` call
-
-        :param label: A label that describes the given data
-        :param data: data that should be displayed for debugging purposes
-        """
-        if type(data) not in (dict, list, int, float, str, bool):
-            get_logger().debug(
-                f"The supplied debug data of type {type(data)} is not JSON serializable and will be wrapped in str()",
-                throttle_duration_sec=1,
-            )
+        """Store JSON-compatible debug data, representing unsupported values as strings."""
+        try:
+            data = json.loads(json.dumps(data, default=str, allow_nan=False))
+        except (TypeError, ValueError):
             data = str(data)
-
         get_logger().debug(f"{label}: {data}")
         self._debug_data[label] = data
 
     def clear_debug_data(self) -> None:
-        """
-        Clear existing debug data
-
-        This is needed when old values are no longer supposed to be visible
-        """
-        self._debug_data = {}
+        self._debug_data.clear()
 
     def repr_dict(self) -> ElementData:
-        """Represent this stack element as dictionary which is JSON encodable"""
-        return {
-            "type": "abstract",
-            "name": self.name,
-            "debug_data": self._debug_data,
-        }
+        return {"type": "abstract", "name": self.name, "debug_data": self._debug_data}

@@ -127,3 +127,21 @@ def test_base_repr_dict():
         "name": "Idle",
         "debug_data": {},
     }
+
+
+def test_nested_debug_values_are_serializable():
+    import json
+
+    action = make_action()
+    action.publish_debug_data("nested", {"items": [object(), None]})
+    assert isinstance(action._debug_data["nested"]["items"][0], str)
+    assert action._debug_data["nested"]["items"][1] is None
+    json.dumps(action.repr_dict(), allow_nan=False)
+
+
+def test_cyclic_debug_data_is_represented_as_a_string():
+    action = make_action()
+    value = []
+    value.append(value)
+    action.publish_debug_data("cyclic", value)
+    assert isinstance(action._debug_data["cyclic"], str)

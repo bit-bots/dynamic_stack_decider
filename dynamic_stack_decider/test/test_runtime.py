@@ -483,10 +483,7 @@ def test_reevaluation_pop_at_root_does_not_shorten_stack():
 
 
 def test_reevaluation_pop_in_the_middle_shortens_stack():
-    # A reevaluating decision that is not at the bottom pops itself during reevaluation. This shortens
-    # the stack down to the reevaluation index. The engine then swallows the resulting internal error
-    # (this is an unusual edge case); the important contract is that update() does not raise and the
-    # stack ends up shortened.
+    # A popped decision cancels reevaluation before the removed frame can be inspected.
     dsd = make_dsd(
         """
         -->T
@@ -541,7 +538,7 @@ def test_unknown_decision_result_is_swallowed():
     assert stack_names(dsd) == ["Chooser"]
 
 
-def test_decision_returning_none_exits():
+def test_decision_returning_none_is_reported():
     dsd = make_dsd(
         """
         -->T
@@ -550,16 +547,16 @@ def test_decision_returning_none_exits():
         """
     )
 
-    # Returning None from a decision is a programming error and triggers sys.exit
-    with pytest.raises(SystemExit):
-        dsd.update()
+    dsd.update()
+    assert isinstance(dsd.last_error, ValueError)
+    assert stack_names(dsd) == ["ReturnNone"]
 
 
 # ---------------------------------------------------------------------------
 # _bind_modules error paths
 # ---------------------------------------------------------------------------
 def test_unknown_action_name_raises_on_load():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         make_dsd(
             """
             -->T
@@ -570,7 +567,7 @@ def test_unknown_action_name_raises_on_load():
 
 
 def test_unknown_decision_name_raises_on_load():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         make_dsd(
             """
             -->T
@@ -741,3 +738,261 @@ def test_fresh_blackboard_between_dsds():
     dsd1.update()
     assert ("perform", "Idle") in bb1.events
     assert bb2.events == []
+
+
+def test_interrupt_cleans_every_frame_once_in_reverse_order(monkeypatch):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> $Guard\n        GO --> @Idle\n")
+    dsd.blackboard.results.update(Chooser="GO", Guard="GO")
+    dsd.update()
+    cleaned = []
+    for _, instance in dsd.stack:
+        monkeypatch.setattr(instance, "on_pop", lambda name=instance.name: cleaned.append(name))
+    dsd.interrupt()
+    assert cleaned == ["Idle", "Guard", "Chooser"]
+    assert stack_names(dsd) == ["Chooser"]
+    assert dsd.last_error is None
+
+
+def test_interrupt_clears_reevaluation_suppression():
+    dsd = make_dsd("-->\n$Guard\n    A --> @Idle + r:false\n    B --> @Run\n")
+    dsd.blackboard.results["Guard"] = "A"
+    dsd.update()
+    assert dsd.do_not_reevaluate
+    dsd.interrupt()
+    assert not dsd.do_not_reevaluate
+    dsd.blackboard.results["Guard"] = "B"
+    dsd.update()
+    assert stack_names(dsd) == ["Guard", "Run"]
+
+
+@pytest.mark.parametrize("decision", ["InterruptOnReeval", "PopOnReeval"])
+def test_stack_mutation_during_reevaluation_does_not_log_an_internal_error(decision):
+    dsd = make_dsd(f"-->\n$Guard\n    GO --> ${decision}\n        GO --> @Idle\n")
+    dsd.blackboard.results.update(Guard="GO", **{decision: "GO"})
+    dsd.update()
+    dsd.update()
+    assert stack_names(dsd) == ["Guard"]
+    assert dsd.last_error is None
+    assert not dsd.stack_reevaluate
+
+
+def test_interrupt_during_normal_decision_does_not_push_stale_outcome(monkeypatch):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n")
+    root = dsd.stack[0][1]
+
+    def perform(reevaluate=False):
+        dsd.interrupt()
+        return "GO"
+
+    monkeypatch.setattr(root, "perform", perform)
+    dsd.update()
+    assert stack_names(dsd) == ["Chooser"]
+    assert dsd.blackboard.events == []
+    assert dsd.last_error is None
+
+
+def test_interrupt_from_reevaluation_predicate_cancels_tick(monkeypatch):
+    dsd = make_dsd("-->\n$Guard\n    GO --> @Idle\n")
+    dsd.blackboard.results["Guard"] = "GO"
+    dsd.update()
+
+    def get_reevaluate():
+        dsd.interrupt()
+        return True
+
+    monkeypatch.setattr(dsd.stack[0][1], "get_reevaluate", get_reevaluate)
+    dsd.update()
+    assert stack_names(dsd) == ["Guard"]
+    assert dsd.last_error is None
+
+
+def test_reevaluation_error_resets_traversal_state(monkeypatch):
+    dsd = make_dsd("-->\n$Guard\n    GO --> @Idle\n")
+    dsd.blackboard.results["Guard"] = "GO"
+    dsd.update()
+
+    def fail(reevaluate=False):
+        raise ValueError("broken guard")
+
+    monkeypatch.setattr(dsd.stack[0][1], "perform", fail)
+    dsd.update()
+    assert isinstance(dsd.last_error, ValueError)
+    assert not dsd.stack_reevaluate
+    assert dsd.stack_exec_index == -1
+    monkeypatch.setattr(dsd.stack[0][1], "get_reevaluate", lambda: False)
+    dsd.update()
+    assert dsd.last_error is None
+    assert dsd.blackboard.events.count(("perform", "Idle")) == 2
+
+
+def test_cleanup_exception_does_not_skip_other_frames(monkeypatch):
+    dsd = make_dsd("-->\n$Guard\n    A --> $Chooser\n        GO --> @Idle\n    B --> @Run\n")
+    dsd.blackboard.results.update(Guard="A", Chooser="GO")
+    dsd.update()
+    cleaned = []
+
+    def fail():
+        cleaned.append("Idle")
+        raise ValueError("cleanup failed")
+
+    monkeypatch.setattr(dsd.stack[-1][1], "on_pop", fail)
+    monkeypatch.setattr(dsd.stack[-2][1], "on_pop", lambda: cleaned.append("Chooser"))
+    dsd.blackboard.results["Guard"] = "B"
+    dsd.update()
+    assert cleaned == ["Idle", "Chooser"]
+    assert stack_names(dsd) == ["Guard", "Run"]
+    assert isinstance(dsd.last_error, ValueError)
+
+
+def test_cleanup_interrupt_does_not_push_stale_branch(monkeypatch):
+    dsd = make_dsd("-->\n$Guard\n    A --> @Idle\n    B --> @Run\n")
+    dsd.blackboard.results["Guard"] = "A"
+    dsd.update()
+    monkeypatch.setattr(dsd.stack[-1][1], "on_pop", dsd.interrupt)
+    dsd.blackboard.results["Guard"] = "B"
+    dsd.update()
+    assert stack_names(dsd) == ["Guard"]
+    assert ("perform", "Run") not in dsd.blackboard.events
+    assert dsd.last_error is None
+
+
+def test_invalid_reevaluation_outcome_keeps_existing_action():
+    dsd = make_dsd("-->\n$Guard\n    GO --> @Idle\n")
+    dsd.blackboard.results["Guard"] = "GO"
+    dsd.update()
+    dsd.blackboard.results["Guard"] = "INVALID"
+    dsd.update()
+    assert stack_names(dsd) == ["Guard", "Idle"]
+    assert ("pop", "Idle") not in dsd.blackboard.events
+    assert isinstance(dsd.last_error, KeyError)
+
+
+def test_chain_cleanup_precedes_successor_construction(monkeypatch):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle, @Run\n")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    order = []
+    monkeypatch.setattr(dsd.stack[-1][1], "on_pop", lambda: order.append("cleanup"))
+    original_init = dsd._init_element
+
+    def initialize(element):
+        order.append("initialize")
+        return original_init(element)
+
+    monkeypatch.setattr(dsd, "_init_element", initialize)
+    dsd.pop()
+    assert order == ["cleanup", "initialize"]
+    assert stack_names(dsd) == ["Chooser", "Run"]
+    assert ("perform", "Run") not in dsd.blackboard.events
+
+
+def test_parameters_are_independent_of_tree_and_next_activation():
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle + items:[1]\n")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    dsd.stack[-1][1].parameters["items"].append(2)
+    dsd.pop()
+    dsd.update()
+    assert dsd.stack[-1][1].parameters == {"items": [1]}
+    assert dsd.stack[-1][0].parameters == {"items": [1]}
+
+
+def test_failed_load_keeps_current_behavior(tmp_path):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    old_tree = dsd.tree
+    old_stack = list(dsd.stack)
+    bad = tmp_path / "unknown.dsd"
+    bad.write_text("-->\n@Unregistered\n")
+    with pytest.raises(ValueError, match="not registered"):
+        dsd.load_behavior(bad)
+    assert dsd.tree is old_tree
+    assert dsd.stack == old_stack
+    assert ("pop", "Idle") not in dsd.blackboard.events
+
+
+def test_behavior_reload_cleans_old_action(tmp_path):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    path = tmp_path / "replacement.dsd"
+    path.write_text("-->\n@Run\n")
+    dsd.load_behavior(path)
+    assert stack_names(dsd) == ["Run"]
+    assert dsd.blackboard.events[-1] == ("pop", "Idle")
+    assert ("perform", "Run") not in dsd.blackboard.events
+
+
+def test_deep_decision_path_does_not_use_python_recursion():
+    from dynamic_stack_decider.dsd import DSD
+    from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement
+
+    from .runtime_elements import Guard, Idle
+
+    root = DecisionTreeElement("Guard", None)
+    root.module = Guard
+    current = root
+    for _ in range(1200):
+        child = DecisionTreeElement("Guard", current)
+        child.module = Guard
+        current.add_child_element(child, "GO")
+        current = child
+    action = ActionTreeElement("Idle", current)
+    action.module = Idle
+    current.add_child_element(action, "GO")
+    blackboard = Blackboard()
+    blackboard.results["Guard"] = "GO"
+    dsd = DSD(blackboard)
+    dsd.set_start_element(root)
+    dsd.update()
+    assert len(dsd.stack) == 1202
+    assert blackboard.events[-1] == ("perform", "Idle")
+    assert dsd.last_error is None
+
+
+def test_recursive_update_is_reported_without_executing_another_tick(monkeypatch):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    monkeypatch.setattr(dsd.stack[-1][1], "perform", lambda: dsd.update())
+    dsd.update()
+    assert isinstance(dsd.last_error, RuntimeError)
+    assert "already running" in str(dsd.last_error)
+    assert stack_names(dsd) == ["Chooser", "Idle"]
+
+
+def test_debug_topic_without_node_does_not_disable_execution():
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n", debug_topic="debug")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    assert ("perform", "Idle") in dsd.blackboard.events
+    assert not dsd.debug_active
+    assert dsd.last_error is None
+
+
+def test_debug_failure_cannot_prevent_action_execution(monkeypatch):
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n")
+    dsd.blackboard.results["Chooser"] = "GO"
+
+    def fail():
+        raise ValueError("debug failure")
+
+    monkeypatch.setattr(dsd, "debug_publish_stack", fail)
+    dsd.update()
+    dsd.update()
+    assert dsd.blackboard.events.count(("perform", "Idle")) == 2
+    assert isinstance(dsd.last_error, ValueError)
+
+
+def test_debug_publishes_state_after_action_pop():
+    node = FakeNode()
+    dsd = make_dsd("-->\n$Chooser\n    GO --> @Idle\n", node=node, debug_topic="debug")
+    dsd.blackboard.results["Chooser"] = "GO"
+    dsd.update()
+    dsd.pop()
+    dsd.blackboard.results["Chooser"] = "INVALID"
+    dsd.update()
+    stack = json.loads(node.publishers["debug/dsd_stack"].messages[-1].data)
+    assert stack["next"] is None
+    assert node.publishers["debug/dsd_current_action"].messages[-1].data == ""
