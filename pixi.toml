@@ -44,6 +44,7 @@ ros-jazzy-ament-index-python = "*"
 
 [feature.visualization.tasks]
 typecheck-gui = "mypy dynamic_stack_decider_visualization/dynamic_stack_decider_visualization"
+test-gui = { cmd = "pytest -p pytest_cov dynamic_stack_decider_visualization/test --cov=dynamic_stack_decider_visualization/dynamic_stack_decider_visualization --cov-report=term-missing", env = { PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1", DSD_REQUIRE_GUI = "1" } }
 
 [feature.visualization.activation.env]
 QT_QPA_PLATFORM = "offscreen"

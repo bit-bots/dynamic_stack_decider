@@ -9,38 +9,28 @@ if TYPE_CHECKING:
 
 
 class Tree(Generic[BlackboardT]):
-    """A tree defining a behaviour, parsed from a .dsd file"""
+    """A parsed behavior or subtree definition."""
 
     def __init__(self) -> None:
-        # The root element of the tree
         self.root_element: AbstractTreeElement[BlackboardT] | None = None
         self.parameter_list: list[str] = []
 
     def set_root_element(self, element: AbstractTreeElement[BlackboardT]) -> None:
-        """
-        Set the root element of the tree
-
-        :param element: The root element
-        """
+        """Set the root blueprint of this definition."""
         self.root_element = element
 
     def __repr__(self) -> str:
         return repr(self.root_element)
 
     def repr_dict(self) -> TreeData:
-        """
-        Represent this tree as dictionary which is JSON encodable
-        """
+        """Serialize this blueprint for the debug protocol."""
         if self.root_element is None:
             raise ValueError("Tree has no root element")
         return self.root_element.repr_dict()
 
 
 class AbstractTreeElement(Generic[BlackboardT]):
-    """
-    An element (node) in the tree. Do not use directly,
-    use one of DecisionTreeElement and ActionTreeElement instead
-    """
+    """A blueprint bound to an element class before activation."""
 
     def __init__(
         self,
@@ -59,27 +49,17 @@ class AbstractTreeElement(Generic[BlackboardT]):
         self.activation_reason: str | None = None
 
     def get_child(self, activating_result: str) -> AbstractTreeElement[BlackboardT] | None:
-        """
-        Get the child that should be activated for the given result.
-        This makes only sense for DecisionTreeElements; others return None
-
-        :param activating_result: The result that activates the returned child
-        :return: The corresponding child element or None
-        """
+        """Return the selected child; actions have no decision children."""
         return None
 
     def set_activation_reason(self, reason: str | None) -> None:
-        """Set the result that activated this element"""
+        """Record the selecting branch, propagating it along an action chain."""
         self.activation_reason = reason
 
     def repr_dict(self) -> TreeData:
-        """
-        Represent this tree element as dictionary which is JSON encodable
-        """
+        """Serialize this blueprint for the debug protocol."""
         return {
-            # A stable identifier for this tree element. It is used to match a stack element to the
-            # exact tree element it belongs to, which is required because a chain (i.e. a sequence)
-            # may contain multiple elements with the same name (e.g. @Wait, @SomeAction, @Wait).
+            # IDs distinguish repeated class names within this loaded tree.
             "id": id(self),
             "name": self.name,
             "parameters": self.parameters,
@@ -87,10 +67,7 @@ class AbstractTreeElement(Generic[BlackboardT]):
 
 
 class DecisionTreeElement(AbstractTreeElement[BlackboardT]):
-    """
-    A tree element describing a decision. A decision has children that are executed on a certain result.
-    Children can be added with add_child_element
-    """
+    """Map outcomes to child blueprints, with optional ELSE fallback."""
 
     def __init__(
         self,
@@ -99,33 +76,23 @@ class DecisionTreeElement(AbstractTreeElement[BlackboardT]):
         parameters: Parameters | None = None,
         unset_parameters: ParameterReferences | None = None,
     ) -> None:
-        """
-        Create a new DecisionTreeElement
-
-        :param name: the class name of the corresponding AbstractDecisionElement
-        :param parent: the parent element, None for the root element
-        :param parameters: A dictionary of parameters
-        :param unset_parameters: A dictionary of parameters that must be set later
-        """
-        # Call the constructor of the superclass
         super().__init__(name, parent, parameters, unset_parameters)
 
-        # Dictionary that maps results of the decision to the corresponding child
         self.children: dict[str, AbstractTreeElement[BlackboardT]] = dict()
 
     def add_child_element(self, element: AbstractTreeElement[BlackboardT], activating_result: str) -> None:
-        """Add a child that will be executed when activating_result is returned"""
+        """Attach a blueprint to a decision outcome."""
         self.children[activating_result] = element
         element.set_activation_reason(activating_result)
 
     def get_child(self, activating_result: str | None) -> AbstractTreeElement[BlackboardT]:
-        """Get the child for a given result"""
+        """Return the matching child or ELSE; reject invalid or unmapped outcomes."""
         if not isinstance(activating_result, str) or not activating_result:
             raise ValueError(f"Decision {self.name!r} must return a non-empty string, got {activating_result!r}")
 
-        if activating_result in self.children.keys():
+        if activating_result in self.children:
             return self.children[activating_result]
-        elif "ELSE" in self.children.keys():
+        elif "ELSE" in self.children:
             return self.children["ELSE"]
         else:
             raise KeyError(f"{activating_result} does not lead to a child of {str(self)} and no ELSE was specified")
@@ -140,28 +107,15 @@ class DecisionTreeElement(AbstractTreeElement[BlackboardT]):
         return self.name
 
     def repr_dict(self) -> TreeData:
-        """
-        Represent this decision as dictionary which is JSON encodable
-        """
-        # Get the dict from the superclass
+        """Serialize this blueprint for the debug protocol."""
         result = super().repr_dict()
-        # Add additional information
         result["type"] = "decision"
         result["children"] = {result: child.repr_dict() for result, child in self.children.items()}
         return result
 
 
 class ActionTreeElement(AbstractTreeElement[BlackboardT]):
-    """
-    A tree element describing an action. An action has optional
-    parameters that will be passed to the module on creation.
-
-    An action may point to a ``next_element`` which is activated once the action
-    pops itself off the stack. This is how sequences (``@A, @B, @C``) are
-    represented: as a chain of actions linked via ``next_element``. The next
-    element may be any tree element, so a decision is also allowed to follow an
-    action.
-    """
+    """An action blueprint whose successor is initialized on completion."""
 
     def __init__(
         self,
@@ -170,20 +124,11 @@ class ActionTreeElement(AbstractTreeElement[BlackboardT]):
         parameters: Parameters | None = None,
         unset_parameters: ParameterReferences | None = None,
     ) -> None:
-        """
-        Create a new ActionTreeElement
-        :param name: the class name of the corresponding AbstractActionElement
-        :param parent: the parent element
-        :param parameters: A dictionary of parameters
-        :param unset_parameters: A dictionary of parameters that must be set later
-        """
         super().__init__(name, parent, parameters, unset_parameters)
-        # The element that is activated when this action pops itself. None if this
-        # action is the last (or only) element in its chain.
         self.next_element: AbstractTreeElement[BlackboardT] | None = None
 
     def set_activation_reason(self, reason: str | None) -> None:
-        """Set the activation reason for this action and propagate it along the chain"""
+        """Record the selecting branch, propagating it along an action chain."""
         self.activation_reason = reason
         # All elements of a chain share the activation reason of the head so that a
         # reevaluated decision below the chain does not consider its result changed
@@ -200,12 +145,8 @@ class ActionTreeElement(AbstractTreeElement[BlackboardT]):
         return self.name
 
     def repr_dict(self) -> TreeData:
-        """
-        Represent this action as dictionary which is JSON encodable
-        """
-        # Get the dict from the superclass
+        """Serialize this blueprint for the debug protocol."""
         result = super().repr_dict()
-        # Add additional information
         result["type"] = "action"
         result["next"] = self.next_element.repr_dict() if self.next_element is not None else None
         return result

@@ -6,6 +6,11 @@ target-version = "py310"
 ignore = ["E501"]
 select = ["F", "E", "B", "W", "I", "N", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+"**/interactive_graphics_view.py" = ["N802"]
+"**/dsd_visualization_plugin.py" = ["N802"]
+"dynamic_stack_decider_visualization/test/test_*.py" = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["dynamic_stack_decider/test", "dynamic_stack_decider_visualization/test"]
 pythonpath = ["dynamic_stack_decider", "dynamic_stack_decider_visualization"]

@@ -25,9 +25,6 @@ class Blackboard:
         self.results: dict[str, str] = {}
 
 
-# ---------------------------------------------------------------------------
-# Actions
-# ---------------------------------------------------------------------------
 class _LoggingAction(AbstractActionElement):
     """Base action that logs its perform and pop calls but otherwise stays on the stack."""
 
@@ -129,9 +126,6 @@ class DoNotReevalThenPop(_LoggingAction):
         return self.pop()
 
 
-# ---------------------------------------------------------------------------
-# Decisions
-# ---------------------------------------------------------------------------
 class _LoggingDecision(AbstractDecisionElement):
     """Base decision that logs its perform calls and returns ``blackboard.results[self.name]``."""
 

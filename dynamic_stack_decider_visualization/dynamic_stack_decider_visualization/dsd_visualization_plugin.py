@@ -30,9 +30,8 @@
 
 from __future__ import annotations
 
-import os
 import sys
-import uuid
+from pathlib import Path
 from typing import Protocol
 
 import pydot
@@ -80,111 +79,78 @@ class DsdWidget(QWidget):
 
 
 class DsdVizPlugin(Plugin):
+    """Inspect a DSD discovered through its ROS 2 debug topics."""
+
     def __init__(self, context: PluginContext) -> None:
         super().__init__(context)
-        self._node: Node = context.node
-        self._initialized = False  # This gets set to true once the plugin hast completely finished loading
-
-        # Ensure startup state
-        self.freeze = False  # Controls whether the state should be updated from remote
+        self._node = context.node
+        self._initialized = False
+        self.freeze = False
         self.dsd_follower: DsdFollower | None = None
         self.running_dsd_instances: dict[str, str] = {}
-        self._init_plugin(context)
-
-        # Performance optimization variables
         self._prev_dotgraph: pydot.Dot | None = None
-        self._prev_QItemModel: QStandardItemModel | None = None
+        self._prev_item_model: QStandardItemModel | None = None
+        self._messages: tuple[str, ...] | None = None
+        self._timer_id: int | None = None
+        self._init_plugin(context)
 
     def _init_plugin(self, context: PluginContext) -> None:
         self.setObjectName("DSD-Visualization")
-
         self._widget = DsdWidget()
         self._widget.setObjectName(self.objectName())
-
-        # load qt ui definition from file
-        ui_file = os.path.join(
-            get_package_share_directory("dynamic_stack_decider_visualization"), "resource", "StackmachineViz.ui"
+        ui_file = (
+            Path(get_package_share_directory("dynamic_stack_decider_visualization")) / "resource/StackmachineViz.ui"
         )
-        loadUi(ui_file, self._widget, {"InteractiveGraphicsView": InteractiveGraphicsView})
-
-        # initialize qt scene
-        self._scene = QGraphicsScene()
+        loadUi(str(ui_file), self._widget)
+        self._scene = QGraphicsScene(self._widget)
         self._scene.setBackgroundBrush(Qt.white)
         self._widget.graphics_view.setScene(self._scene)
-
-        # Bind fit-in-view button
         self._widget.fit_in_view_push_button.setIcon(QIcon.fromTheme("view-fullscreen"))
         self._widget.fit_in_view_push_button.pressed.connect(self.fit_in_view)
+        self._widget.auto_fit_graph_check_box.toggled.connect(lambda enabled: self.fit_in_view() if enabled else None)
 
-        # Fit-in-view on checkbox toggle
-        self._widget.auto_fit_graph_check_box.toggled.connect(self.fit_in_view)
-
-        # Freezing
         def toggle_freeze() -> None:
-            self.freeze = not self.freeze
+            self.freeze = self._widget.freeze_push_button.isChecked()
             self.refresh()
 
-        self._widget.freeze_push_button.toggled.connect(toggle_freeze)
-
-        # Exporting and importing
-        self._widget.save_as_svg_push_button.pressed.connect(self.save_svg_to_file)
-
-        # Discover dsd instances
-        self.discover_dsd_instances()
-
-        # Connect the combo box to the set_dsd method
-        self._widget.dsd_selector_combo_box.currentTextChanged.connect(self.set_dsd)
-
-        # Bind refresh button and add icon
-        self._widget.refresh_combobox_push_button.setIcon(QIcon.fromTheme("view-refresh"))
-        self._widget.refresh_combobox_push_button.pressed.connect(self.discover_dsd_instances)
-
-        # Hook that resets the dot cache and thus forces a redraw of the dotgraph
         def reset_dot_cache() -> None:
             if self.dsd_follower is not None:
                 self.dsd_follower.reset_cache()
 
-        # Add hook that triggers redraw to ui elements
+        self._widget.freeze_push_button.toggled.connect(toggle_freeze)
+        self._widget.save_as_svg_push_button.pressed.connect(self.save_svg_to_file)
+        self._widget.dsd_selector_combo_box.currentTextChanged.connect(self.set_dsd)
+        self._widget.refresh_combobox_push_button.setIcon(QIcon.fromTheme("view-refresh"))
+        self._widget.refresh_combobox_push_button.pressed.connect(self.discover_dsd_instances)
         self._widget.highlight_connections_check_box.toggled.connect(reset_dot_cache)
         self._widget.show_full_tree.toggled.connect(reset_dot_cache)
-        self._widget.auto_fit_graph_check_box.toggled.connect(reset_dot_cache)
-        self._widget.fit_in_view_push_button.pressed.connect(reset_dot_cache)
-        self._widget.freeze_push_button.toggled.connect(reset_dot_cache)
-
         self._widget.graphics_view.zoomed.connect(lambda: self._widget.auto_fit_graph_check_box.setChecked(False))
-
-        # Add widget to the user interface
+        self.discover_dsd_instances()
         context.add_widget(self._widget)
-
-        # Start a timer that calls back every 100 ms
         self._timer_id = self.startTimer(100)
 
     def discover_dsd_instances(self) -> None:
-        """Updates the dict of known dsd instances"""
-        # Store all DSDs in a dict
-        dsd_instances = {}
-
-        # List all known topics
-        topics = self._node.get_topic_names_and_types()
-        for topic_name, topic_types in topics:
-            if topic_name.endswith("/dsd_tree") and "std_msgs/msg/String" in topic_types:
-                # Extract the dsd name from the topic name
-                dsd_name = "/".join(topic_name.split("/")[:-1]).upper()
-                # Store the dsd name and the debug topic namespace (not just the tree topic)
-                dsd_instances[dsd_name] = topic_name.replace("/dsd_tree", "")
-
-        # Update the list of known dsd instances
-        self.running_dsd_instances = dsd_instances
-
-        # Update the list of dsd instances in the combo box
-        self._widget.dsd_selector_combo_box.clear()
-        self._widget.dsd_selector_combo_box.addItem("Select DSD...")
-        for name in self.running_dsd_instances.keys():
-            self._widget.dsd_selector_combo_box.addItem(name)
+        instances: dict[str, str] = {}
+        for topic, types in self._node.get_topic_names_and_types():
+            if topic.endswith("/dsd_tree") and "std_msgs/msg/String" in types:
+                namespace = topic.removesuffix("/dsd_tree")
+                instances[namespace] = namespace
+        self.running_dsd_instances = instances
+        selector = self._widget.dsd_selector_combo_box
+        previous = selector.currentText()
+        selector.blockSignals(True)
+        try:
+            selector.clear()
+            selector.addItem("Select DSD...")
+            selector.addItems(sorted(instances))
+            if previous in instances:
+                selector.setCurrentText(previous)
+        finally:
+            selector.blockSignals(False)
+        self.set_dsd(selector.currentText())
 
     def save_settings(self, plugin_settings: object, instance_settings: Settings) -> None:
         super().save_settings(plugin_settings, instance_settings)
-
         instance_settings.set_value("auto_fit_graph_check_box_state", self._widget.auto_fit_graph_check_box.isChecked())
         instance_settings.set_value(
             "highlight_connections_check_box_state", self._widget.highlight_connections_check_box.isChecked()
@@ -193,17 +159,15 @@ class DsdVizPlugin(Plugin):
 
     def restore_settings(self, plugin_settings: object, instance_settings: Settings) -> None:
         super().restore_settings(plugin_settings, instance_settings)
-
         self._widget.auto_fit_graph_check_box.setChecked(
-            instance_settings.value("auto_fit_graph_check_box_state", True) in [True, "true"]
+            instance_settings.value("auto_fit_graph_check_box_state", True) in (True, "true")
         )
         self._widget.highlight_connections_check_box.setChecked(
-            instance_settings.value("highlight_connections_check_box_state", True) in [True, "true"]
+            instance_settings.value("highlight_connections_check_box_state", True) in (True, "true")
         )
         self._widget.show_full_tree.setChecked(
-            instance_settings.value("show_full_tree_check_box_state", False) in [True, "true"]
+            instance_settings.value("show_full_tree_check_box_state", False) in (True, "true")
         )
-
         self._initialized = True
         self.refresh()
 
@@ -211,129 +175,92 @@ class DsdVizPlugin(Plugin):
         file_name, _ = QFileDialog.getSaveFileName(
             self._widget, self.tr("Save as SVG"), "stackmachine.svg", self.tr("Scalable Vector Graphic (*.svg)")
         )
-
-        if file_name is not None and file_name != "":
-            generator = QSvgGenerator()
-            generator.setFileName(file_name)
-            generator.setSize((self._scene.sceneRect().size() * 2.0).toSize())
-
-            painter = QPainter(generator)
+        if not file_name:
+            return
+        generator = QSvgGenerator()
+        generator.setFileName(file_name)
+        generator.setSize((self._scene.sceneRect().size() * 2.0).toSize())
+        painter = QPainter(generator)
+        try:
             painter.setRenderHint(QPainter.Antialiasing)
             self._scene.render(painter)
+        finally:
             painter.end()
 
-    # fmt: off
-    def timerEvent(self, timer_event: QTimerEvent | None) -> None: #noqa: N802
-        # fmt: on
-        """This gets called by QT whenever the timer ticks"""
-        # Refresh the viz if the freeze button is not pressed
+    def timerEvent(self, timer_event: QTimerEvent | None) -> None:
         if not self.freeze:
             self.refresh()
-
-        # Automatically fit in view if the checkbox is checked
         if self._widget.auto_fit_graph_check_box.isChecked():
             self.fit_in_view()
 
     def fit_in_view(self) -> None:
-        """Rescales the tree to fit the window"""
         self._widget.graphics_view.fitInView(self._scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
     def refresh(self) -> None:
-        """Refresh the complete drawn representation"""
-
-        # Show message if the plugin is not yet completely initialized
         if not self._initialized:
-            self._render_messages("The plugin is not yet completely initialized. Please wait...")
-
-        # Show message if no dsd is selected
+            self._render_messages("The plugin is initializing.")
         elif self.dsd_follower is None:
             self._render_messages("No DSD selected")
-
         else:
-            # Render the dotgraph and the debug data
-            self._render_dotgraph(self.dsd_follower.to_dotgraph(
-                full_tree=self._widget.show_full_tree.isChecked(),
-            ))
+            self._render_dotgraph(self.dsd_follower.to_dotgraph(self._widget.show_full_tree.isChecked()))
             self._render_debug_data(self.dsd_follower.to_q_item_model())
 
     def _render_messages(self, *messages: str) -> None:
-        """Render simple messages on the canvas"""
-
-        msg_dot = pydot.Dot()
-
-        for msg in messages:
-            msg_dot.add_node(pydot.Node(str(uuid.uuid4()), label=str(msg)))
-
-        self._render_dotgraph(msg_dot)
-        self._render_debug_data(QStandardItemModel(self._scene))
+        if messages == self._messages:
+            return
+        dot = pydot.Dot(graph_type="digraph")
+        for index, message in enumerate(messages):
+            dot.add_node(pydot.Node(f"message_{index}", label=message))
+        self._render_dotgraph(dot)
+        self._render_debug_data(QStandardItemModel(self._widget))
+        self._messages = messages
 
     def _render_dotgraph(self, dotgraph: pydot.Dot) -> None:
-        """Render the specified dotgraph on canvas"""
-
-        # Only redraw when the graph differs from the previous one
-        if self._prev_dotgraph == dotgraph:
+        if self._prev_dotgraph is dotgraph:
             return
-        else:
-            self._prev_dotgraph = dotgraph
-
+        self._prev_dotgraph = dotgraph
+        self._messages = None
         self._scene.clear()
-
-        if self._widget.highlight_connections_check_box.isChecked():
-            highlight_level = 3
-        else:
-            highlight_level = 1
-
-        # Generate qt items from dotcode
-        dotcode = PydotFactory().create_dot(dotgraph)
-        nodes, edges = DotToQtGenerator().dotcode_to_qt_items(dotcode, highlight_level, same_label_siblings=False)
-
-        # Add generated items to scene
-        for node_item in nodes.values():
-            self._scene.addItem(node_item)
-        for edge_items in edges.values():
-            for edge_item in edge_items:
-                edge_item.add_to_scene(self._scene)
-
+        highlight = 3 if self._widget.highlight_connections_check_box.isChecked() else 1
+        nodes, edges = DotToQtGenerator().dotcode_to_qt_items(
+            PydotFactory().create_dot(dotgraph), highlight, same_label_siblings=False
+        )
+        for node in nodes.values():
+            self._scene.addItem(node)
+        for group in edges.values():
+            for edge in group:
+                edge.add_to_scene(self._scene)
         self._scene.setSceneRect(self._scene.itemsBoundingRect())
 
-    def _render_debug_data(self, qitem_model: QStandardItemModel) -> None:
-        """Render debug data in the tree view on the right side of the scene"""
-
-        # Only redraw when the item-model differs from the previous one
-        if self._prev_QItemModel == qitem_model:
+    def _render_debug_data(self, model: QStandardItemModel) -> None:
+        if self._prev_item_model is model:
             return
-        else:
-            self._prev_QItemModel = qitem_model
-            self._widget.stack_prop_tree_view.setHeaderHidden(True)
-            self._widget.stack_prop_tree_view.setModel(qitem_model)
-            self._widget.stack_prop_tree_view.expandAll()
+        self._prev_item_model = model
+        self._widget.stack_prop_tree_view.setHeaderHidden(True)
+        self._widget.stack_prop_tree_view.setModel(model)
+        self._widget.stack_prop_tree_view.expandAll()
 
     def set_dsd(self, name: str) -> None:
-        """
-        Set the target dsd
-
-        :param name: display_name of any dsd in the locations.yaml
-        """
-        if name == "Select DSD...":
-            self.dsd_follower = None
+        topic = self.running_dsd_instances.get(name)
+        if self.dsd_follower is not None and self.dsd_follower.dsd_debug_topic == topic:
             return
-
-        # Check if the selected dsd is known
-        if name not in self.running_dsd_instances.keys():
-            return
-
-        # Destroy the old dsd follower, so that we don't keep old subscriptions that take up resources
         if self.dsd_follower is not None:
             self.dsd_follower.destroy()
+        self.dsd_follower = DsdFollower(self._node, topic) if topic is not None else None
+        self._messages = None
 
-        # Initialize dsd follower
-        self.dsd_follower = DsdFollower(self._node, self.running_dsd_instances[name])
+    def shutdown_plugin(self) -> None:
+        if self._timer_id is not None:
+            self.killTimer(self._timer_id)
+            self._timer_id = None
+        if self.dsd_follower is not None:
+            self.dsd_follower.destroy()
+            self.dsd_follower = None
 
 
 def main() -> None:
     plugin = "dynamic_stack_decider_visualization.dsd_visualization_plugin.DsdVizPlugin"
-    main = Main(filename=plugin)
-    sys.exit(main.main(standalone=plugin))
+    sys.exit(Main(filename=plugin).main(standalone=plugin))
 
 
 if __name__ == "__main__":
