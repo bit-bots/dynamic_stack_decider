@@ -1,9 +1,12 @@
-from abc import ABCMeta
+from __future__ import annotations
+
+from abc import ABCMeta, abstractmethod
 
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
+from dynamic_stack_decider.types import BlackboardT, ElementData
 
 
-class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
+class AbstractDecisionElement(AbstractStackElement[BlackboardT], metaclass=ABCMeta):
     """
     The logic is encapsulated in two types of elements.
     The decision elements define the logical path similar to a behavior tree.
@@ -20,7 +23,7 @@ class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
 
     _reevaluate = False
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> ElementData:
         """
         Represent this stack element as dictionary which is JSON encodable
         """
@@ -30,7 +33,7 @@ class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
             "debug_data": self._debug_data,
         }
 
-    def get_reevaluate(self):
+    def get_reevaluate(self) -> bool:
         """
         Each decision element may define a \textit{reevaluate} criteria.
         If the corresponding method returns true, the element will be executed even if it is in the middle of the stack.
@@ -45,3 +48,8 @@ class AbstractDecisionElement(AbstractStackElement, metaclass=ABCMeta):
         This can be used to regularly check preconditions, e.g. if the robot knows where the ball is.
         """
         return self._reevaluate
+
+    @abstractmethod
+    def perform(self, reevaluate: bool = False) -> str:
+        """Execute the element; decisions return an outcome and actions return nothing."""
+        raise NotImplementedError(f"Implement perform() in {self.name}")

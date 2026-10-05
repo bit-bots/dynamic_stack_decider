@@ -10,3 +10,14 @@ select = ["F", "E", "B", "W", "I", "N", "UP"]
 testpaths = ["dynamic_stack_decider/test", "dynamic_stack_decider_visualization/test"]
 pythonpath = ["dynamic_stack_decider", "dynamic_stack_decider_visualization"]
 addopts = "--strict-config --strict-markers -ra"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = ["dynamic_stack_decider", "dynamic_stack_decider_visualization", "stubs"]
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["rclpy.*", "std_msgs.*", "ament_index_python.*", "PyQt5.uic"]
+ignore_missing_imports = true
+follow_imports = "skip"

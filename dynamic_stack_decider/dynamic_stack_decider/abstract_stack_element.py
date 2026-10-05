@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic
 
 from dynamic_stack_decider.logger import get_logger
+from dynamic_stack_decider.types import BlackboardT, ElementData, Parameters
 
 if TYPE_CHECKING:
     from dynamic_stack_decider.dsd import DSD
 
 
-class AbstractStackElement(metaclass=ABCMeta):
+class AbstractStackElement(Generic[BlackboardT], metaclass=ABCMeta):
     """
     The AbstractStackElement is the basis of all elements on the stack.
     It provides some help functions which should not be overloaded.
@@ -15,16 +18,16 @@ class AbstractStackElement(metaclass=ABCMeta):
     Each element which inherits from the AbstractStackElement can be used as a root element on the stack.
     """
 
-    _dsd: "DSD"
-    parameters: dict[str, bool | int | float | str]
+    _dsd: DSD[BlackboardT]
+    parameters: Parameters
 
-    def __init__(self, blackboard, dsd: "DSD", parameters: dict[str, bool | int | float | str]):
+    def __init__(self, blackboard: BlackboardT, dsd: DSD[BlackboardT], parameters: Parameters) -> None:
         """
         :param blackboard: Shared blackboard for data exchange between elements
         :param dsd: The stack decider which has this element on its stack.
         :param parameters: Parameters which serve as arguments to this element
         """
-        self._debug_data = {}
+        self._debug_data: dict[str, object] = {}
         """
         This is a dict in which data can be saved that should get represented on a __repr__ call.
         It can be set using publish_debug_data()
@@ -41,7 +44,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         return self.__class__.__name__
 
-    def pop(self):
+    def pop(self) -> None:
         """
         Help method which pops the element of the stack.
 
@@ -52,7 +55,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         self._dsd.pop()
 
-    def on_pop(self):  # noqa
+    def on_pop(self) -> None:
         """
         This method is called when the element is popped from the stack.
         It can be used to clean up resources, cancel actions or similar tasks.
@@ -61,7 +64,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def perform(self, reevaluate=False):
+    def perform(self, reevaluate: bool = False) -> str | None:
         """
         This method is called when the element is on top of the stack.
         This method has to be overloaded by the implementation!
@@ -71,13 +74,13 @@ class AbstractStackElement(metaclass=ABCMeta):
         msg = f"You should override perform() in {self.__class__.__name__}"
         raise NotImplementedError(msg)
 
-    def interrupt(self):
+    def interrupt(self) -> None:
         """
         An interrupt leads to a complete clearing of the stack.
         """
         self._dsd.interrupt()
 
-    def publish_debug_data(self, label: str, data: dict | list | int | float | str | bool):
+    def publish_debug_data(self, label: str, data: object) -> None:
         """
         Publish debug data. Can be viewed using the DSD visualization
 
@@ -97,7 +100,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         get_logger().debug(f"{label}: {data}")
         self._debug_data[label] = data
 
-    def clear_debug_data(self):
+    def clear_debug_data(self) -> None:
         """
         Clear existing debug data
 
@@ -105,7 +108,7 @@ class AbstractStackElement(metaclass=ABCMeta):
         """
         self._debug_data = {}
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> ElementData:
         """Represent this stack element as dictionary which is JSON encodable"""
         return {
             "type": "abstract",

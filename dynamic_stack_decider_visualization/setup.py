@@ -8,6 +8,7 @@ setup(
     description="ROS 2 RQT visualization for the Dynamic Stack Decider",
     python_requires=">=3.10",
     packages=find_packages(exclude=["test", "test.*", "tests", "tests.*"]),
+    package_data={package_name: ["py.typed"]},
     data_files=[
         ("share/" + package_name + "/resource", ["resource/StackmachineViz.ui"]),
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),

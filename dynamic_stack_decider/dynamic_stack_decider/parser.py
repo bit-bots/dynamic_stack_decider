@@ -1,17 +1,22 @@
+from __future__ import annotations
+
 import copy
 import re
+from pathlib import Path
+from typing import Generic
 
 import yaml
 from rclpy.node import Node
 
-from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, Tree
+from dynamic_stack_decider.tree import AbstractTreeElement, ActionTreeElement, DecisionTreeElement, Tree
+from dynamic_stack_decider.types import BlackboardT, ParameterReferences, Parameters
 
 
-class DsdParser:
-    def __init__(self, node: Node | None = None):
+class DsdParser(Generic[BlackboardT]):
+    def __init__(self, node: Node | None = None) -> None:
         self.node = node
 
-    def parse(self, file_path: str) -> Tree:
+    def parse(self, file_path: str | Path) -> Tree[BlackboardT]:
         """
         Parse a .dsd file to a Tree
 
@@ -19,13 +24,13 @@ class DsdParser:
         :return: a Tree object containing the parsed elements
         """
         # The root tree
-        tree = Tree()
+        tree: Tree[BlackboardT] = Tree()
         # Dictionary of subtrees that are created
         # The key is the name and the value is the corresponding TreeElement
-        subtrees = dict()
+        subtrees: dict[str, Tree[BlackboardT]] = {}
 
         current_subtree = tree
-        current_tree_element = None
+        current_tree_element: AbstractTreeElement[BlackboardT] | None = None
         next_is_start = False
         next_is_comment = False
         comment = False
@@ -92,6 +97,8 @@ class DsdParser:
                     if indent < last_indent:
                         # Go layers up, depending on indent difference
                         for _ in range(indent, last_indent, 4):
+                            if current_tree_element is None:
+                                raise ParseError(f"Error parsing line {lnr}: Invalid indentation")
                             current_tree_element = current_tree_element.parent
 
                     if re.search(r"\s*-?->\s*", line_content):
@@ -103,16 +110,22 @@ class DsdParser:
                             if current_tree_element is None:
                                 # The current subtree is empty, set the subtree as its root element
                                 subtree, _, _ = self._lookup_subtree(call, lnr, subtrees)
+                                if subtree.root_element is None:
+                                    raise ParseError(f"Error parsing line {lnr}: Empty subtree")
                                 current_subtree.set_root_element(subtree.root_element)
                             else:
                                 # Copy this subtree and place it in the current tree position
                                 subtree_copy = self._instantiate_subtree(call, lnr, subtrees)
+                                if not isinstance(current_tree_element, DecisionTreeElement):
+                                    raise ParseError(f"Error parsing line {lnr}: Branch parent must be a decision")
                                 current_tree_element.add_child_element(subtree_copy, result)
 
                         elif re.search(r"\s*,\s*", call):
                             # A sequence: a chain of actions, optionally ending in a decision or a subtree
                             tokens = re.split(r"\s*,\s*", call)
                             head, tail = self._create_chain(tokens, current_tree_element, lnr, subtrees)
+                            if not isinstance(current_tree_element, DecisionTreeElement):
+                                raise ParseError(f"Error parsing line {lnr}: Branch parent must be a decision")
                             current_tree_element.add_child_element(head, result)
                             if tokens[-1].startswith("$"):
                                 # A decision at the end of a sequence receives its children from the
@@ -122,11 +135,15 @@ class DsdParser:
                         elif call.startswith("@"):
                             # An action is called
                             element = self._create_tree_element(call, current_tree_element, lnr)
+                            if not isinstance(current_tree_element, DecisionTreeElement):
+                                raise ParseError(f"Error parsing line {lnr}: Branch parent must be a decision")
                             current_tree_element.add_child_element(element, result)
 
                         elif call.startswith("$"):
                             # A decision is called
                             element = self._create_tree_element(call, current_tree_element, lnr)
+                            if not isinstance(current_tree_element, DecisionTreeElement):
+                                raise ParseError(f"Error parsing line {lnr}: Branch parent must be a decision")
                             current_tree_element.add_child_element(element, result)
                             current_tree_element = element
 
@@ -152,19 +169,17 @@ class DsdParser:
                     last_indent = indent
         return tree
 
-    def _extract_parameters(self, token, lnr):
+    def _extract_parameters(self, token: str, lnr: int) -> tuple[str, Parameters, ParameterReferences]:
         """
         Extract parameters from a token string in the form of name + key1:value1 + key2:value2
         :param token: the string containing the name and the parameters
-        :type token: str
         :param lnr: Line number of the current line (used for error messages)
-        :type lnr: int
         :return: the name, a dict of set parameters, a dict of unset parameters
         """
         parameters = re.split(r"\s*\+\s*", token)
         name = parameters.pop(0)
-        parameter_dict = dict()
-        unset_parameters = dict()
+        parameter_dict: Parameters = {}
+        unset_parameters: ParameterReferences = {}
         for parameter in parameters:
             try:
                 parameter_key, parameter_value = parameter.split(":")
@@ -177,28 +192,29 @@ class DsdParser:
                 )
 
             if parameter_value.startswith("%"):
-                parameter_value = self.node.get_parameter(parameter_value[1:]).value if self.node is not None else None
-                parameter_dict[parameter_key] = parameter_value
+                parameter_dict[parameter_key] = (
+                    self.node.get_parameter(parameter_value[1:]).value if self.node is not None else None
+                )
             elif parameter_value.startswith("*"):
                 # This is a reference to the value specified in the subtree
                 unset_parameters[parameter_key] = parameter_value[1:]
             else:
-                parameter_value = yaml.safe_load(parameter_value)  # universal interpretation of correct datatype
-                parameter_dict[parameter_key] = parameter_value
+                parameter_dict[parameter_key] = yaml.safe_load(parameter_value)
         return name, parameter_dict, unset_parameters
 
-    def _create_tree_element(self, token, parent, lnr):
+    def _create_tree_element(
+        self, token: str, parent: AbstractTreeElement[BlackboardT] | None, lnr: int
+    ) -> AbstractTreeElement[BlackboardT]:
         """
         Create a tree element given a token and a parent.
         The method derives the type (Action/Decision) and optional parameters from the token
         :param token: the string describing the element in the dsd description
         :param parent: the parent element of the new element, None for root
-        :type parent: Union[DecisionTreeElement, ActionTreeElement]
         :param lnr: Line number of the current line (used for error messages)
-        :type lnr: int
         :return: a TreeElement containing the information given in token
         """
         name, parameter_dict, unset_parameters = self._extract_parameters(token[1:], lnr)
+        element: AbstractTreeElement[BlackboardT]
         if token.startswith("$"):
             element = DecisionTreeElement(name, parent, parameter_dict, unset_parameters)
         elif token.startswith("@"):
@@ -207,7 +223,13 @@ class DsdParser:
             raise ParseError("An element has to start with either $ or @")
         return element
 
-    def _create_chain(self, tokens, parent, lnr, subtrees):
+    def _create_chain(
+        self,
+        tokens: list[str],
+        parent: AbstractTreeElement[BlackboardT] | None,
+        lnr: int,
+        subtrees: dict[str, Tree[BlackboardT]],
+    ) -> tuple[AbstractTreeElement[BlackboardT], AbstractTreeElement[BlackboardT]]:
         """
         Create a sequence as a chain of tree elements linked via ``next_element``.
 
@@ -216,16 +238,13 @@ class DsdParser:
         allows a decision or a subtree to follow a sequence of actions.
 
         :param tokens: The call tokens of the sequence (e.g. ``["@A", "@B", "$D"]``)
-        :type tokens: list[str]
         :param parent: The element the chain is attached to
         :param lnr: Line number of the current line (used for error messages)
-        :type lnr: int
         :param subtrees: The already parsed subtrees, needed to resolve a trailing subtree call
-        :type subtrees: dict
         :return: A tuple of the head element (the child of ``parent``) and the tail element of the chain
         """
-        head = None
-        previous = None
+        head: AbstractTreeElement[BlackboardT] | None = None
+        previous: AbstractTreeElement[BlackboardT] | None = None
         for i, token in enumerate(tokens):
             is_last = i == len(tokens) - 1
             if is_last and token.startswith("#"):
@@ -246,11 +265,17 @@ class DsdParser:
             if previous is None:
                 head = element
             else:
+                if not isinstance(previous, ActionTreeElement):
+                    raise ParseError(f"Error parsing line {lnr}: Only actions may be followed")
                 previous.next_element = element
             previous = element
+        if head is None or previous is None:
+            raise ParseError(f"Error parsing line {lnr}: Empty action chain")
         return head, previous
 
-    def _lookup_subtree(self, call, lnr, subtrees):
+    def _lookup_subtree(
+        self, call: str, lnr: int, subtrees: dict[str, Tree[BlackboardT]]
+    ) -> tuple[Tree[BlackboardT], Parameters, ParameterReferences]:
         """
         Look up the subtree referenced by a ``#``-call and validate that its parameters match.
 
@@ -270,7 +295,9 @@ class DsdParser:
             )
         return subtree, parameters, unset_parameters
 
-    def _instantiate_subtree(self, call, lnr, subtrees):
+    def _instantiate_subtree(
+        self, call: str, lnr: int, subtrees: dict[str, Tree[BlackboardT]]
+    ) -> AbstractTreeElement[BlackboardT]:
         """
         Create a deep copy of a referenced subtree with its parameters evaluated.
 
@@ -280,11 +307,19 @@ class DsdParser:
         :return: The root element of the instantiated subtree
         """
         subtree, parameters, unset_parameters = self._lookup_subtree(call, lnr, subtrees)
+        if subtree.root_element is None:
+            raise ParseError(f"Error parsing line {lnr}: Empty subtree")
         subtree_copy = copy.deepcopy(subtree.root_element)
         self._evaluate_subtree_parameters(subtree_copy, parameters, unset_parameters, lnr)
         return subtree_copy
 
-    def _evaluate_subtree_parameters(self, root, parameters, unset_parameters, lnr):
+    def _evaluate_subtree_parameters(
+        self,
+        root: AbstractTreeElement[BlackboardT],
+        parameters: Parameters,
+        unset_parameters: ParameterReferences,
+        lnr: int,
+    ) -> None:
         """
         Resolve the unset parameters of a copied subtree against the parameters given in the call.
 
