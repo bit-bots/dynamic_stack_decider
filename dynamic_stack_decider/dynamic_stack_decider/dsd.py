@@ -170,6 +170,7 @@ class DSD(Generic[BlackboardT]):
 
     def _discard_from(self, index: int) -> bool:
         """Detach frames before cleanup; return whether cleanup left the remaining stack intact."""
+        # Cleanup can call back into DSD; detach every removed frame before invoking it.
         removed = self.stack[index:]
         del self.stack[index:]
         self._stack_revision += 1
@@ -216,6 +217,7 @@ class DSD(Generic[BlackboardT]):
                 if not isinstance(tree_element, DecisionTreeElement):
                     raise TypeError("Decision instance is not bound to a decision tree element")
                 result = instance.perform(True)
+                # pop() or interrupt() invalidates the saved frame and its returned outcome.
                 if not self.stack_reevaluate or self._stack_revision != revision:
                     return True
                 child = tree_element.get_child(result)
@@ -237,6 +239,7 @@ class DSD(Generic[BlackboardT]):
                 self.set_do_not_reevaluate()
             revision = self._stack_revision
             result = instance.perform()
+            # A callback may have replaced the path; do not follow its stale outcome.
             if self._stack_revision != revision:
                 return
             if not isinstance(instance, AbstractDecisionElement):
@@ -302,6 +305,7 @@ class DSD(Generic[BlackboardT]):
         if not self._discard_from(len(self.stack) - 1):
             return
         if successor is not None:
+            # Suppression spans the chain under the compatibility contract (see issue #121).
             self._append(successor)
         else:
             self.do_not_reevaluate = False
