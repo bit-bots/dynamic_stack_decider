@@ -36,7 +36,6 @@ from PyQt5.QtGui import QMouseEvent, QWheelEvent
 from PyQt5.QtWidgets import QGraphicsView, QWidget
 
 
-# ruff: noqa: N802
 class InteractiveGraphicsView(QGraphicsView):
     zoomed = pyqtSignal()
 

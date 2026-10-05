@@ -2,7 +2,7 @@
 Runtime behavior tests for the DSD execution engine (``dsd.py``).
 
 These tests drive a DSD through ``update()`` and assert on the resulting stack and execution order.
-They aim to cover every runtime code path: pushing/popping, sequences (chains), reevaluation
+They cover: pushing/popping, sequences (chains), reevaluation
 (including ELSE handling), the ``never_reevaluate`` / ``do_not_reevaluate`` flags, interrupts,
 decisions and subtrees following actions, error handling and the debug publishing.
 """
@@ -42,9 +42,6 @@ class FakeNode:
         return publisher
 
 
-# ---------------------------------------------------------------------------
-# Basic decision / action flow
-# ---------------------------------------------------------------------------
 def test_start_element_on_stack_after_load():
     dsd = make_dsd(
         """
@@ -129,9 +126,6 @@ def test_nested_decisions():
     assert stack_names(dsd) == ["Chooser", "Guard", "Idle"]
 
 
-# ---------------------------------------------------------------------------
-# Sequences (chains via next_element)
-# ---------------------------------------------------------------------------
 def test_sequence_advances_one_action_per_tick():
     dsd = make_dsd(
         """
@@ -223,9 +217,6 @@ def test_subtree_after_action():
     assert stack_names(dsd) == ["Chooser", "Guard", "Idle"]
 
 
-# ---------------------------------------------------------------------------
-# Reevaluation
-# ---------------------------------------------------------------------------
 def test_reevaluation_rebuilds_stack_on_change():
     dsd = make_dsd(
         """
@@ -305,9 +296,6 @@ def test_reevaluation_else_branch():
     assert stack_names(dsd) == ["ElseGuard", "Idle"]
 
 
-# ---------------------------------------------------------------------------
-# never_reevaluate / do_not_reevaluate
-# ---------------------------------------------------------------------------
 def test_never_reevaluate_parameter_suppresses_reevaluation():
     dsd = make_dsd(
         """
@@ -385,9 +373,6 @@ def test_do_not_reevaluate_preserved_across_sequence_advance():
     assert dsd.do_not_reevaluate is True
 
 
-# ---------------------------------------------------------------------------
-# Interrupts
-# ---------------------------------------------------------------------------
 def test_external_interrupt_resets_stack():
     dsd = make_dsd(
         """
@@ -441,9 +426,6 @@ def test_interrupt_during_reevaluation():
     assert stack_names(dsd) == ["InterruptOnReeval"]
 
 
-# ---------------------------------------------------------------------------
-# pop edge cases
-# ---------------------------------------------------------------------------
 def test_pop_of_only_element_is_noop():
     # A behavior whose root is a self-popping action
     dsd = make_dsd(
@@ -504,9 +486,6 @@ def test_reevaluation_pop_in_the_middle_shortens_stack():
     assert ("pop", "Idle") in dsd.blackboard.events
 
 
-# ---------------------------------------------------------------------------
-# Error handling
-# ---------------------------------------------------------------------------
 def test_exception_in_perform_is_swallowed():
     dsd = make_dsd(
         """
@@ -552,9 +531,6 @@ def test_decision_returning_none_is_reported():
     assert stack_names(dsd) == ["ReturnNone"]
 
 
-# ---------------------------------------------------------------------------
-# _bind_modules error paths
-# ---------------------------------------------------------------------------
 def test_unknown_action_name_raises_on_load():
     with pytest.raises(ValueError):
         make_dsd(
@@ -593,9 +569,6 @@ def test_bind_modules_rejects_unknown_element_type():
         dsd._bind_modules(Bogus())
 
 
-# ---------------------------------------------------------------------------
-# Misc DSD API
-# ---------------------------------------------------------------------------
 def test_get_stack_returns_the_stack():
     dsd = make_dsd(
         """
@@ -639,9 +612,6 @@ def test_stack_holds_bound_instances():
     assert root_instance.blackboard is dsd.blackboard is top_instance.blackboard
 
 
-# ---------------------------------------------------------------------------
-# Debug publishing
-# ---------------------------------------------------------------------------
 def test_debug_tree_published_on_load():
     node = FakeNode()
     make_dsd(

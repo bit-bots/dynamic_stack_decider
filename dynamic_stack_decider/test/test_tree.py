@@ -1,16 +1,13 @@
 """
 Unit tests for the tree element classes (``tree.py``): child lookup (including ELSE and error cases),
 activation-reason propagation along a chain, and the JSON representation (``repr_dict``) including the
-stable ``id`` and the ``next`` chain link.
+instance ``id`` and the ``next`` chain link.
 """
 
 import pytest
 from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, Tree
 
 
-# ---------------------------------------------------------------------------
-# get_child
-# ---------------------------------------------------------------------------
 def test_get_child_returns_matching_child():
     d = DecisionTreeElement("D", None)
     a = ActionTreeElement("A", d)
@@ -44,9 +41,6 @@ def test_action_get_child_is_always_none():
     assert a.get_child("anything") is None
 
 
-# ---------------------------------------------------------------------------
-# Activation reason propagation
-# ---------------------------------------------------------------------------
 def test_set_activation_reason_propagates_along_chain():
     a = ActionTreeElement("A", None)
     b = ActionTreeElement("B", a)
@@ -87,9 +81,6 @@ def test_add_child_element_propagates_reason_to_chain():
     assert tail.activation_reason == "R"
 
 
-# ---------------------------------------------------------------------------
-# repr_dict
-# ---------------------------------------------------------------------------
 def test_action_repr_dict_contains_id_type_and_next():
     a = ActionTreeElement("A", None, parameters={"k": "v"})
     b = ActionTreeElement("B", a)
@@ -127,9 +118,6 @@ def test_repr_dict_id_is_stable_and_unique():
     assert a1.repr_dict()["id"] != a2.repr_dict()["id"]
 
 
-# ---------------------------------------------------------------------------
-# Tree and string representations
-# ---------------------------------------------------------------------------
 def test_tree_repr_dict_delegates_to_root():
     d = DecisionTreeElement("D", None)
     d.add_child_element(ActionTreeElement("A", d), "R")

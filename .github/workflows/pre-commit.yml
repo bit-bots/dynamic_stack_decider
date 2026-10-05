@@ -47,3 +47,4 @@ jobs:
           cache: true
           environments: visualization
       - run: pixi run --locked -e visualization typecheck-gui
+      - run: pixi run --locked -e visualization test-gui

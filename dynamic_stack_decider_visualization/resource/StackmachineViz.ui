@@ -203,7 +203,7 @@
   <customwidget>
    <class>InteractiveGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>rqt_graph.interactive_graphics_view</header>
+   <header>dynamic_stack_decider_visualization.interactive_graphics_view</header>
   </customwidget>
  </customwidgets>
  <resources/>
