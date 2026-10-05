@@ -33,9 +33,9 @@ def test_get_child_unknown_result_raises_keyerror():
         d.get_child("Y")
 
 
-def test_get_child_none_result_exits():
+def test_get_child_none_result_raises_valueerror():
     d = DecisionTreeElement("D", None)
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError, match="non-empty string"):
         d.get_child(None)
 
 

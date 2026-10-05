@@ -10,6 +10,7 @@ select = ["F", "E", "B", "W", "I", "N", "UP"]
 testpaths = ["dynamic_stack_decider/test", "dynamic_stack_decider_visualization/test"]
 pythonpath = ["dynamic_stack_decider", "dynamic_stack_decider_visualization"]
 addopts = "--strict-config --strict-markers -ra"
+markers = ["ros: integration test using ROS middleware"]
 
 [tool.mypy]
 python_version = "3.10"
