@@ -1,16 +1,23 @@
+from __future__ import annotations
+
 import sys
-from typing import Optional
+from typing import TYPE_CHECKING, Generic
+
+from dynamic_stack_decider.types import BlackboardT, ParameterReferences, Parameters, TreeData
+
+if TYPE_CHECKING:
+    from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
 
 
-class Tree:
+class Tree(Generic[BlackboardT]):
     """A tree defining a behaviour, parsed from a .dsd file"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # The root element of the tree
-        self.root_element: AbstractTreeElement | None = None
-        self.parameter_list = []
+        self.root_element: AbstractTreeElement[BlackboardT] | None = None
+        self.parameter_list: list[str] = []
 
-    def set_root_element(self, element: "AbstractTreeElement"):
+    def set_root_element(self, element: AbstractTreeElement[BlackboardT]) -> None:
         """
         Set the root element of the tree
 
@@ -18,17 +25,19 @@ class Tree:
         """
         self.root_element = element
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.root_element)
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> TreeData:
         """
         Represent this tree as dictionary which is JSON encodable
         """
-        return self.root_element.repr_dict() or {}
+        if self.root_element is None:
+            raise ValueError("Tree has no root element")
+        return self.root_element.repr_dict()
 
 
-class AbstractTreeElement:
+class AbstractTreeElement(Generic[BlackboardT]):
     """
     An element (node) in the tree. Do not use directly,
     use one of DecisionTreeElement and ActionTreeElement instead
@@ -37,18 +46,18 @@ class AbstractTreeElement:
     def __init__(
         self,
         name: str,
-        parent: Optional["AbstractTreeElement"],
-        parameters: dict | None = None,
-        unset_parameters: dict | None = None,
-    ):
+        parent: AbstractTreeElement[BlackboardT] | None,
+        parameters: Parameters | None = None,
+        unset_parameters: ParameterReferences | None = None,
+    ) -> None:
         self.name = name
         self.parent = parent
         self.parameters = parameters or dict()
         self.unset_parameters = unset_parameters or dict()
-        self.module = None
-        self.activation_reason = None
+        self.module: type[AbstractStackElement[BlackboardT]] | None = None
+        self.activation_reason: str | None = None
 
-    def get_child(self, activating_result: str) -> Optional["AbstractTreeElement"]:
+    def get_child(self, activating_result: str) -> AbstractTreeElement[BlackboardT] | None:
         """
         Get the child that should be activated for the given result.
         This makes only sense for DecisionTreeElements; others return None
@@ -58,11 +67,11 @@ class AbstractTreeElement:
         """
         return None
 
-    def set_activation_reason(self, reason):
+    def set_activation_reason(self, reason: str | None) -> None:
         """Set the result that activated this element"""
         self.activation_reason = reason
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> TreeData:
         """
         Represent this tree element as dictionary which is JSON encodable
         """
@@ -76,13 +85,19 @@ class AbstractTreeElement:
         }
 
 
-class DecisionTreeElement(AbstractTreeElement):
+class DecisionTreeElement(AbstractTreeElement[BlackboardT]):
     """
     A tree element describing a decision. A decision has children that are executed on a certain result.
     Children can be added with add_child_element
     """
 
-    def __init__(self, name, parent, parameters=None, unset_parameters=None):
+    def __init__(
+        self,
+        name: str,
+        parent: AbstractTreeElement[BlackboardT] | None,
+        parameters: Parameters | None = None,
+        unset_parameters: ParameterReferences | None = None,
+    ) -> None:
         """
         Create a new DecisionTreeElement
 
@@ -95,14 +110,14 @@ class DecisionTreeElement(AbstractTreeElement):
         super().__init__(name, parent, parameters, unset_parameters)
 
         # Dictionary that maps results of the decision to the corresponding child
-        self.children: dict[str, AbstractTreeElement] = dict()
+        self.children: dict[str, AbstractTreeElement[BlackboardT]] = dict()
 
-    def add_child_element(self, element: AbstractTreeElement, activating_result: str):
+    def add_child_element(self, element: AbstractTreeElement[BlackboardT], activating_result: str) -> None:
         """Add a child that will be executed when activating_result is returned"""
         self.children[activating_result] = element
         element.set_activation_reason(activating_result)
 
-    def get_child(self, activating_result: str) -> AbstractTreeElement | None:
+    def get_child(self, activating_result: str | None) -> AbstractTreeElement[BlackboardT]:
         """Get the child for a given result"""
         if not activating_result:
             # give advice about error
@@ -115,16 +130,16 @@ class DecisionTreeElement(AbstractTreeElement):
         else:
             raise KeyError(f"{activating_result} does not lead to a child of {str(self)} and no ELSE was specified")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         r = "$" + self.name + f" ({self.parameters}): "
         for result, child in self.children.items():
             r += result + ": {" + repr(child) + "} "
         return r
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> TreeData:
         """
         Represent this decision as dictionary which is JSON encodable
         """
@@ -136,7 +151,7 @@ class DecisionTreeElement(AbstractTreeElement):
         return result
 
 
-class ActionTreeElement(AbstractTreeElement):
+class ActionTreeElement(AbstractTreeElement[BlackboardT]):
     """
     A tree element describing an action. An action has optional
     parameters that will be passed to the module on creation.
@@ -148,7 +163,13 @@ class ActionTreeElement(AbstractTreeElement):
     action.
     """
 
-    def __init__(self, name, parent, parameters=None, unset_parameters=None):
+    def __init__(
+        self,
+        name: str,
+        parent: AbstractTreeElement[BlackboardT] | None,
+        parameters: Parameters | None = None,
+        unset_parameters: ParameterReferences | None = None,
+    ) -> None:
         """
         Create a new ActionTreeElement
         :param name: the class name of the corresponding AbstractActionElement
@@ -159,9 +180,9 @@ class ActionTreeElement(AbstractTreeElement):
         super().__init__(name, parent, parameters, unset_parameters)
         # The element that is activated when this action pops itself. None if this
         # action is the last (or only) element in its chain.
-        self.next_element: AbstractTreeElement | None = None
+        self.next_element: AbstractTreeElement[BlackboardT] | None = None
 
-    def set_activation_reason(self, reason):
+    def set_activation_reason(self, reason: str | None) -> None:
         """Set the activation reason for this action and propagate it along the chain"""
         self.activation_reason = reason
         # All elements of a chain share the activation reason of the head so that a
@@ -170,15 +191,15 @@ class ActionTreeElement(AbstractTreeElement):
         if self.next_element is not None:
             self.next_element.set_activation_reason(reason)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.next_element is not None:
             return f"@{self.name} ({self.parameters}) -> {repr(self.next_element)}"
         return f"@{self.name} ({self.parameters})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> TreeData:
         """
         Represent this action as dictionary which is JSON encodable
         """

@@ -1,13 +1,16 @@
-from abc import ABCMeta
+from __future__ import annotations
+
+from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING
 
 from dynamic_stack_decider.abstract_stack_element import AbstractStackElement
+from dynamic_stack_decider.types import BlackboardT, ElementData, Parameters
 
 if TYPE_CHECKING:
     from dynamic_stack_decider.dsd import DSD
 
 
-class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
+class AbstractActionElement(AbstractStackElement[BlackboardT], metaclass=ABCMeta):
     """
     One action is similar to a state of an FSM.
     As in this case, the system stays in this state in contrast to the decision elements which are called only for determining the active action.
@@ -18,7 +21,7 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
     If the action is complete, it can remove itself from the stack by performing a pop command.
     """
 
-    def __init__(self, blackboard, dsd: "DSD", parameters: dict[str, bool | int | float | str]):
+    def __init__(self, blackboard: BlackboardT, dsd: DSD[BlackboardT], parameters: Parameters) -> None:
         """
         Constructor of the action element
         :param blackboard: Shared blackboard for data exchange between elements
@@ -29,14 +32,14 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
         # Reevaluation can be disabled by setting 'r' or 'reevaluate' to False
         self.never_reevaluate = not parameters.get("r", True) or not parameters.get("reevaluate", True)
 
-    def do_not_reevaluate(self):
+    def do_not_reevaluate(self) -> None:
         """
         Prohibits the next reevaluate.
         This is useful if you have an action which has to be completed without interruption, e.g. a kick animation.
         """
         self._dsd.set_do_not_reevaluate()
 
-    def repr_dict(self) -> dict:
+    def repr_dict(self) -> ElementData:
         """
         Represent this stack element as dictionary which is JSON encodable
         """
@@ -45,3 +48,8 @@ class AbstractActionElement(AbstractStackElement, metaclass=ABCMeta):
             "name": self.name,
             "debug_data": self._debug_data,
         }
+
+    @abstractmethod
+    def perform(self, reevaluate: bool = False) -> None:
+        """Execute the element; decisions return an outcome and actions return nothing."""
+        raise NotImplementedError(f"Implement perform() in {self.name}")

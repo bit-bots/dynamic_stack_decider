@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import inspect
 import json
@@ -5,6 +7,7 @@ import pkgutil
 import sys
 import traceback
 from pathlib import Path
+from typing import Generic
 
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
@@ -21,9 +24,10 @@ from dynamic_stack_decider.tree import (
     DecisionTreeElement,
     Tree,
 )
+from dynamic_stack_decider.types import BlackboardT, StackData
 
 
-def discover_elements(path: str) -> dict[str, AbstractStackElement]:
+def discover_elements(path: str | Path) -> dict[str, type[AbstractStackElement[BlackboardT]]]:
     """
     Extract all the classes from the files in the given path and return a dictionary containing them
 
@@ -31,11 +35,11 @@ def discover_elements(path: str) -> dict[str, AbstractStackElement]:
     :return: A dictionary with class names as keys and classes as values
     :raises ValueError: if path is not an existing directory or file
     """
-    elements = {}
+    elements: dict[str, type[AbstractStackElement[BlackboardT]]] = {}
     path = Path(path)
     original_pythonpath = sys.path.copy()
 
-    def discover_module_elements(module_name):
+    def discover_module_elements(module_name: str) -> None:
         try:
             if sys.modules.get(module_name, False):
                 # reload the module if it is already imported,
@@ -81,7 +85,7 @@ def discover_elements(path: str) -> dict[str, AbstractStackElement]:
     return elements
 
 
-class DSD:
+class DSD(Generic[BlackboardT]):
     """
     One decision is defined as the root decision, the starting point.
     Each decision element, which is pushed on the stack, is immediately executed until no further element is pushed.
@@ -100,14 +104,14 @@ class DSD:
     Any following code will be executed as soon as the stack is not further expanded.
     """
 
-    start_element = None
+    start_element: AbstractTreeElement[BlackboardT] | None = None
     stack_exec_index = -1
     stack_reevaluate = False
     do_not_reevaluate = False
     old_representation = ""
     debug_active_action_cache: str | None = None
 
-    def __init__(self, blackboard, debug_topic: str = None, node: Node | None = None):
+    def __init__(self, blackboard: BlackboardT, debug_topic: str | None = None, node: Node | None = None) -> None:
         """
         :param blackboard: Blackboard instance which will be available to all modules
         :param debug_topic:  Topic on which debug data should be published
@@ -116,13 +120,13 @@ class DSD:
         self.blackboard = blackboard
         self.node = node
 
-        self.tree: Tree | None = None
+        self.tree: Tree[BlackboardT] | None = None
         # The stack is implemented as a list of tuples consisting of the tree element
         # and the actual module instance
-        self.stack: list[tuple[AbstractTreeElement, AbstractStackElement]] = []
+        self.stack: list[tuple[AbstractTreeElement[BlackboardT], AbstractStackElement[BlackboardT]]] = []
 
-        self.actions: dict[str, AbstractActionElement] = {}
-        self.decisions: dict[str, AbstractDecisionElement] = {}
+        self.actions: dict[str, type[AbstractActionElement[BlackboardT]]] = {}
+        self.decisions: dict[str, type[AbstractDecisionElement[BlackboardT]]] = {}
 
         # Check if debugging is active
         self.debug_active = debug_topic is not None
@@ -145,36 +149,38 @@ class DSD:
             self.debug_current_action_publisher = node.create_publisher(String, debug_current_action_topic, 10)
             get_logger().debug(f"Debugging current action on '{debug_current_action_topic}'")
 
-    def register_actions(self, module_path):
+    def register_actions(self, module_path: str | Path) -> None:
         """
         Register every class in a given path as an action
         :param module_path: A path containing files with classes extending AbstractActionElement
         """
-        self.actions = {k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractActionElement)}
+        discovered: dict[str, type[AbstractStackElement[BlackboardT]]] = discover_elements(module_path)
+        self.actions = {k: v for k, v in discovered.items() if issubclass(v, AbstractActionElement)}
 
-    def register_decisions(self, module_path):
+    def register_decisions(self, module_path: str | Path) -> None:
         """
         Register every class in a given path as a decision
         :param module_path: A path containing files with classes extending AbstractDecisionElement
         """
-        self.decisions = {
-            k: v for k, v in discover_elements(module_path).items() if issubclass(v, AbstractDecisionElement)
-        }
+        discovered: dict[str, type[AbstractStackElement[BlackboardT]]] = discover_elements(module_path)
+        self.decisions = {k: v for k, v in discovered.items() if issubclass(v, AbstractDecisionElement)}
 
-    def load_behavior(self, path):
+    def load_behavior(self, path: str | Path) -> None:
         """
         Load a .dsd file into the behavior to execute it. This should be called after the actions
         and decisions have been loaded.
         :param path: The path to the .dsd file describing the behavior
         :return:
         """
-        parser = DsdParser(self.node)
+        parser: DsdParser[BlackboardT] = DsdParser(self.node)
         self.tree = parser.parse(path)
+        if self.tree.root_element is None:
+            raise ValueError("Behavior has no root element")
         self._bind_modules(self.tree.root_element)
         self.set_start_element(self.tree.root_element)
         self.debug_publish_tree()
 
-    def _bind_modules(self, element):
+    def _bind_modules(self, element: AbstractTreeElement[BlackboardT]) -> None:
         """
         Recursively traverse the tree and bind the registered action and decision classes to
         the corresponding tree elements
@@ -198,19 +204,23 @@ class DSD:
         else:
             raise ValueError(f'Unknown parser tree element type "{type(element)}" for element "{element}"!')
 
-    def _init_element(self, element: AbstractTreeElement) -> AbstractStackElement:
+    def _init_element(self, element: AbstractTreeElement[BlackboardT]) -> AbstractStackElement[BlackboardT]:
         """Initializes the module belonging to the given element."""
+        if element.module is None:
+            raise ValueError(f"Element {element.name!r} has no bound implementation")
         return element.module(self.blackboard, self, element.parameters)
 
-    def set_start_element(self, start_element: AbstractTreeElement):
+    def set_start_element(self, start_element: AbstractTreeElement[BlackboardT]) -> None:
         """
         This method defines the start element on the stack, which stays always on the bottom of the stack.
         It should be called in __init__.
         """
         self.start_element = start_element
+        if self.start_element is None:
+            raise RuntimeError("No behavior has been loaded")
         self.stack = [(self.start_element, self._init_element(self.start_element))]
 
-    def interrupt(self):
+    def interrupt(self) -> None:
         """
         An interrupt is an event which clears the complete stack to reset the behavior.
         In the special case of RoboCup, we use it when the game-state changes, but it can also be used for
@@ -221,9 +231,11 @@ class DSD:
             # we were currently checking preconditions
             # we stop this, so that update() knows that it has to stop
             self.stack_reevaluate = False
+        if self.start_element is None:
+            raise RuntimeError("No behavior has been loaded")
         self.stack = [(self.start_element, self._init_element(self.start_element))]
 
-    def update(self, reevaluate: bool = True):
+    def update(self, reevaluate: bool = True) -> None:
         """
         Calls the element which is currently on top of the stack.
         Before doing this, all preconditions are checked (all decision elements where reevaluate is true).
@@ -240,6 +252,8 @@ class DSD:
                 for tree_element, instance in self.stack[:-1]:
                     # check all elements except the top one, but not the actions
                     if isinstance(instance, AbstractDecisionElement) and instance.get_reevaluate():
+                        if not isinstance(tree_element, DecisionTreeElement):
+                            raise TypeError("Decision instance is not bound to a decision tree element")
                         result = instance.perform(True)
                         # Check whether this result would be an ELSE case
                         result_is_else = result not in tree_element.children.keys()
@@ -272,13 +286,15 @@ class DSD:
                 # Deactivate reevaluation if action had never_reevaluate flag
                 self.set_do_not_reevaluate()
             # Run the top module
-            result = current_instance.perform()
+            top_result = current_instance.perform()
             if isinstance(current_instance, AbstractDecisionElement):
-                self.push(current_tree_element.get_child(result))
+                if not isinstance(current_tree_element, DecisionTreeElement):
+                    raise TypeError("Decision instance is not bound to a decision tree element")
+                self.push(current_tree_element.get_child(top_result))
         except Exception:
             get_logger().error(str(traceback.format_exc()))
 
-    def push(self, element: AbstractTreeElement):
+    def push(self, element: AbstractTreeElement[BlackboardT]) -> None:
         """
         Put a new element on the stack and start it directly.
 
@@ -291,7 +307,7 @@ class DSD:
         # we call the new element without another reevaluate
         self.update(False)
 
-    def pop(self):
+    def pop(self) -> None:
         """
         Removes the element from the stack. The previous element will not be called again.
         """
@@ -325,25 +341,30 @@ class DSD:
             # because no module should control the stack beyond its lifetime
             self.do_not_reevaluate = False
 
-    def set_do_not_reevaluate(self):
+    def set_do_not_reevaluate(self) -> None:
         """No reevaluation on next iteration"""
         self.do_not_reevaluate = True
 
-    def get_stack(self):
+    def get_stack(self) -> list[tuple[AbstractTreeElement[BlackboardT], AbstractStackElement[BlackboardT]]]:
         """
         Returns the current stack
         """
         return self.stack
 
-    def debug_publish_stack(self):
+    def debug_publish_stack(self) -> None:
         """
         Publishes a JSON representation of the current stack
         """
         if self.debug_active and self.debug_stack_publisher.get_subscription_count() != 0:
             # Construct JSON encodable object which represents the current stack
-            data = None
+            data: StackData | None = None
             for tree_elem, elem_instance in reversed(self.stack):
-                elem_data = elem_instance.repr_dict()
+                elem_data: StackData = {
+                    **elem_instance.repr_dict(),
+                    "activation_reason": tree_elem.activation_reason,
+                    "id": id(tree_elem),
+                    "next": data,
+                }
                 elem_data["activation_reason"] = tree_elem.activation_reason
                 # Attach the id of the corresponding tree element so the visualization can match this
                 # stack element to the exact tree element (names alone are ambiguous within a chain).
@@ -354,17 +375,19 @@ class DSD:
             msg = String(data=json.dumps(data))
             self.debug_stack_publisher.publish(msg)
 
-    def debug_publish_tree(self):
+    def debug_publish_tree(self) -> None:
         """
         Publishes a JSON representation of the parsed tree
         """
         if self.debug_active:
             # Construct JSON encodable object which represents the current stack
+            if self.tree is None:
+                return
             data = self.tree.repr_dict()
             msg = String(data=json.dumps(data))
             self.debug_tree_publisher.publish(msg)
 
-    def debug_publish_current_action(self):
+    def debug_publish_current_action(self) -> None:
         """
         Publishes the name of the currently active action
         """

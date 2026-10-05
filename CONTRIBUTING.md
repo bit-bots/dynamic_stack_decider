@@ -8,6 +8,8 @@ contains only code quality tools.
 ```sh
 pixi run --locked test
 pixi run --locked package
+pixi run --locked typecheck
+pixi run --locked -e visualization typecheck-gui
 pixi run --locked -e format format
 pixi run --locked -e format lint
 ```
@@ -35,3 +37,9 @@ checks.
 Changes to scheduling, action outcomes, error recovery, parameter syntax, or
 registration should describe compatibility and migration. Use issues to compare
 options before introducing a new public contract.
+
+The core, visualization, and packaging checks use strict mypy. Public packages
+ship `py.typed`; blackboards are generic and parameter values use `object` to
+reflect the existing YAML and ROS inputs. Narrow a parameter with `isinstance`
+before using it as a particular type. Untyped ROS integrations are confined to
+third-party imports, and the small RQT stubs document the interfaces used here.

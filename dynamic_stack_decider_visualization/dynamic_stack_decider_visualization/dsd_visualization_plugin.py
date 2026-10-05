@@ -28,16 +28,19 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import annotations
+
 import os
 import sys
 import uuid
+from typing import Protocol
 
 import pydot
 from ament_index_python import get_package_share_directory
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimerEvent
 from PyQt5.QtGui import QIcon, QPainter, QStandardItemModel
 from PyQt5.QtSvg import QSvgGenerator
-from PyQt5.QtWidgets import QFileDialog, QGraphicsScene, QWidget
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QFileDialog, QGraphicsScene, QPushButton, QTreeView, QWidget
 from PyQt5.uic import loadUi
 from qt_dotgraph.dot_to_qt import DotToQtGenerator
 from qt_dotgraph.pydotfactory import PydotFactory
@@ -49,8 +52,35 @@ from .dsd_follower import DsdFollower
 from .interactive_graphics_view import InteractiveGraphicsView
 
 
+class PluginContext(Protocol):
+    node: Node
+
+    def add_widget(self, widget: QWidget) -> None: ...
+
+
+class Settings(Protocol):
+    def set_value(self, key: str, value: object) -> None: ...
+
+    def value(self, key: str, default: object) -> object: ...
+
+
+class DsdWidget(QWidget):
+    """Widgets populated by the packaged Qt UI definition."""
+
+    graphics_view: InteractiveGraphicsView
+    stack_prop_tree_view: QTreeView
+    dsd_selector_combo_box: QComboBox
+    highlight_connections_check_box: QCheckBox
+    show_full_tree: QCheckBox
+    auto_fit_graph_check_box: QCheckBox
+    fit_in_view_push_button: QPushButton
+    freeze_push_button: QPushButton
+    refresh_combobox_push_button: QPushButton
+    save_as_svg_push_button: QPushButton
+
+
 class DsdVizPlugin(Plugin):
-    def __init__(self, context):
+    def __init__(self, context: PluginContext) -> None:
         super().__init__(context)
         self._node: Node = context.node
         self._initialized = False  # This gets set to true once the plugin hast completely finished loading
@@ -62,13 +92,13 @@ class DsdVizPlugin(Plugin):
         self._init_plugin(context)
 
         # Performance optimization variables
-        self._prev_dotgraph = None
-        self._prev_QItemModel = None
+        self._prev_dotgraph: pydot.Dot | None = None
+        self._prev_QItemModel: QStandardItemModel | None = None
 
-    def _init_plugin(self, context):
+    def _init_plugin(self, context: PluginContext) -> None:
         self.setObjectName("DSD-Visualization")
 
-        self._widget = QWidget()
+        self._widget = DsdWidget()
         self._widget.setObjectName(self.objectName())
 
         # load qt ui definition from file
@@ -90,7 +120,7 @@ class DsdVizPlugin(Plugin):
         self._widget.auto_fit_graph_check_box.toggled.connect(self.fit_in_view)
 
         # Freezing
-        def toggle_freeze():
+        def toggle_freeze() -> None:
             self.freeze = not self.freeze
             self.refresh()
 
@@ -110,7 +140,7 @@ class DsdVizPlugin(Plugin):
         self._widget.refresh_combobox_push_button.pressed.connect(self.discover_dsd_instances)
 
         # Hook that resets the dot cache and thus forces a redraw of the dotgraph
-        def reset_dot_cache():
+        def reset_dot_cache() -> None:
             if self.dsd_follower is not None:
                 self.dsd_follower.reset_cache()
 
@@ -121,13 +151,7 @@ class DsdVizPlugin(Plugin):
         self._widget.fit_in_view_push_button.pressed.connect(reset_dot_cache)
         self._widget.freeze_push_button.toggled.connect(reset_dot_cache)
 
-        # Add to InteractiveGraphicsView mouse wheel event that disables auto-fit-in-view
-        def wheel_event(event):
-            self._widget.auto_fit_graph_check_box.setChecked(False)
-            self._widget.graphics_view.__class__.wheelEvent(self._widget.graphics_view, event)
-
-        # Overwrite the original wheelEvent handler
-        self._widget.graphics_view.wheelEvent = wheel_event
+        self._widget.graphics_view.zoomed.connect(lambda: self._widget.auto_fit_graph_check_box.setChecked(False))
 
         # Add widget to the user interface
         context.add_widget(self._widget)
@@ -135,7 +159,7 @@ class DsdVizPlugin(Plugin):
         # Start a timer that calls back every 100 ms
         self._timer_id = self.startTimer(100)
 
-    def discover_dsd_instances(self):
+    def discover_dsd_instances(self) -> None:
         """Updates the dict of known dsd instances"""
         # Store all DSDs in a dict
         dsd_instances = {}
@@ -158,7 +182,7 @@ class DsdVizPlugin(Plugin):
         for name in self.running_dsd_instances.keys():
             self._widget.dsd_selector_combo_box.addItem(name)
 
-    def save_settings(self, plugin_settings, instance_settings):
+    def save_settings(self, plugin_settings: object, instance_settings: Settings) -> None:
         super().save_settings(plugin_settings, instance_settings)
 
         instance_settings.set_value("auto_fit_graph_check_box_state", self._widget.auto_fit_graph_check_box.isChecked())
@@ -167,7 +191,7 @@ class DsdVizPlugin(Plugin):
         )
         instance_settings.set_value("show_full_tree_check_box_state", self._widget.show_full_tree.isChecked())
 
-    def restore_settings(self, plugin_settings, instance_settings):
+    def restore_settings(self, plugin_settings: object, instance_settings: Settings) -> None:
         super().restore_settings(plugin_settings, instance_settings)
 
         self._widget.auto_fit_graph_check_box.setChecked(
@@ -183,7 +207,7 @@ class DsdVizPlugin(Plugin):
         self._initialized = True
         self.refresh()
 
-    def save_svg_to_file(self):
+    def save_svg_to_file(self) -> None:
         file_name, _ = QFileDialog.getSaveFileName(
             self._widget, self.tr("Save as SVG"), "stackmachine.svg", self.tr("Scalable Vector Graphic (*.svg)")
         )
@@ -199,7 +223,7 @@ class DsdVizPlugin(Plugin):
             painter.end()
 
     # fmt: off
-    def timerEvent(self, timer_event): #noqa: N802
+    def timerEvent(self, timer_event: QTimerEvent | None) -> None: #noqa: N802
         # fmt: on
         """This gets called by QT whenever the timer ticks"""
         # Refresh the viz if the freeze button is not pressed
@@ -210,11 +234,11 @@ class DsdVizPlugin(Plugin):
         if self._widget.auto_fit_graph_check_box.isChecked():
             self.fit_in_view()
 
-    def fit_in_view(self):
+    def fit_in_view(self) -> None:
         """Rescales the tree to fit the window"""
         self._widget.graphics_view.fitInView(self._scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refresh the complete drawn representation"""
 
         # Show message if the plugin is not yet completely initialized
@@ -232,7 +256,7 @@ class DsdVizPlugin(Plugin):
             ))
             self._render_debug_data(self.dsd_follower.to_q_item_model())
 
-    def _render_messages(self, *messages):
+    def _render_messages(self, *messages: str) -> None:
         """Render simple messages on the canvas"""
 
         msg_dot = pydot.Dot()
@@ -243,7 +267,7 @@ class DsdVizPlugin(Plugin):
         self._render_dotgraph(msg_dot)
         self._render_debug_data(QStandardItemModel(self._scene))
 
-    def _render_dotgraph(self, dotgraph):
+    def _render_dotgraph(self, dotgraph: pydot.Dot) -> None:
         """Render the specified dotgraph on canvas"""
 
         # Only redraw when the graph differs from the previous one
@@ -264,15 +288,15 @@ class DsdVizPlugin(Plugin):
         nodes, edges = DotToQtGenerator().dotcode_to_qt_items(dotcode, highlight_level, same_label_siblings=False)
 
         # Add generated items to scene
-        for node_item in nodes:
-            self._scene.addItem(nodes.get(node_item))
-        for edge_items in edges:
-            for edge_item in edges.get(edge_items):
+        for node_item in nodes.values():
+            self._scene.addItem(node_item)
+        for edge_items in edges.values():
+            for edge_item in edge_items:
                 edge_item.add_to_scene(self._scene)
 
         self._scene.setSceneRect(self._scene.itemsBoundingRect())
 
-    def _render_debug_data(self, qitem_model):
+    def _render_debug_data(self, qitem_model: QStandardItemModel) -> None:
         """Render debug data in the tree view on the right side of the scene"""
 
         # Only redraw when the item-model differs from the previous one
@@ -284,7 +308,7 @@ class DsdVizPlugin(Plugin):
             self._widget.stack_prop_tree_view.setModel(qitem_model)
             self._widget.stack_prop_tree_view.expandAll()
 
-    def set_dsd(self, name):
+    def set_dsd(self, name: str) -> None:
         """
         Set the target dsd
 
@@ -306,7 +330,7 @@ class DsdVizPlugin(Plugin):
         self.dsd_follower = DsdFollower(self._node, self.running_dsd_instances[name])
 
 
-def main():
+def main() -> None:
     plugin = "dynamic_stack_decider_visualization.dsd_visualization_plugin.DsdVizPlugin"
     main = Main(filename=plugin)
     sys.exit(main.main(standalone=plugin))

@@ -8,6 +8,7 @@ setup(
     description="Persistent actions selected by reevaluable decision trees",
     python_requires=">=3.10",
     packages=find_packages(exclude=["test", "test.*", "tests", "tests.*"]),
+    package_data={package_name: ["py.typed"]},
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),

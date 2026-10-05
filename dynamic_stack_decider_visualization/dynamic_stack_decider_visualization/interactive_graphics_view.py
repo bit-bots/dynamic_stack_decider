@@ -29,31 +29,41 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QTransform
-from PyQt5.QtWidgets import QGraphicsView
+from __future__ import annotations
+
+from PyQt5.QtCore import QPoint, QPointF, QRectF, Qt, pyqtSignal
+from PyQt5.QtGui import QMouseEvent, QWheelEvent
+from PyQt5.QtWidgets import QGraphicsView, QWidget
 
 
 # ruff: noqa: N802
 class InteractiveGraphicsView(QGraphicsView):
-    def __init__(self, parent=None):
+    zoomed = pyqtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("InteractiveGraphicsView")
 
-        self._last_pan_point = None
-        self._last_scene_center = None
+        self._last_pan_point: QPoint | None = None
+        self._last_scene_center: QPointF | None = None
 
-    def mousePressEvent(self, mouse_event):
+    def mousePressEvent(self, mouse_event: QMouseEvent | None) -> None:
+        if mouse_event is None:
+            return
         self._last_pan_point = mouse_event.pos()
         self._last_scene_center = self._map_to_scene_f(QRectF(self.frameRect()).center())
         self.setCursor(Qt.ClosedHandCursor)
 
-    def mouseReleaseEvent(self, mouse_event):
+    def mouseReleaseEvent(self, mouse_event: QMouseEvent | None) -> None:
+        if mouse_event is None:
+            return
         self.setCursor(Qt.OpenHandCursor)
         self._last_pan_point = None
 
-    def mouseMoveEvent(self, mouse_event):
-        if self._last_pan_point is not None:
+    def mouseMoveEvent(self, mouse_event: QMouseEvent | None) -> None:
+        if mouse_event is None:
+            return
+        if self._last_pan_point is not None and self._last_scene_center is not None:
             delta_scene = self.mapToScene(mouse_event.pos()) - self.mapToScene(self._last_pan_point)
             if not delta_scene.isNull():
                 self.centerOn(self._last_scene_center - delta_scene)
@@ -61,18 +71,17 @@ class InteractiveGraphicsView(QGraphicsView):
             self._last_pan_point = mouse_event.pos()
         QGraphicsView.mouseMoveEvent(self, mouse_event)
 
-    def wheelEvent(self, wheel_event):
-        if wheel_event.modifiers() == Qt.NoModifier:
-            try:
-                delta = wheel_event.angleDelta().y()
-            except AttributeError:
-                delta = wheel_event.delta()
+    def wheelEvent(self, wheel_event: QWheelEvent | None) -> None:
+        if wheel_event is None:
+            return
+        self.zoomed.emit()
+        if not wheel_event.modifiers():
+            delta = wheel_event.angleDelta().y()
             delta = max(min(delta, 480), -480)
             mouse_before_scale_in_scene = self.mapToScene(wheel_event.pos())
 
             scale_factor = 1 + (0.2 * (delta / 120.0))
-            scaling = QTransform(scale_factor, 0, 0, scale_factor, 0, 0)
-            self.setTransform(self.transform() * scaling)
+            self.scale(scale_factor, scale_factor)
 
             mouse_after_scale_in_scene = self.mapToScene(wheel_event.pos())
             center_in_scene = self.mapToScene(self.frameRect().center())
@@ -82,7 +91,7 @@ class InteractiveGraphicsView(QGraphicsView):
         else:
             QGraphicsView.wheelEvent(self, wheel_event)
 
-    def _map_to_scene_f(self, point_f):
+    def _map_to_scene_f(self, point_f: QPointF) -> QPointF:
         point = point_f.toPoint()
         if point_f.x() == point.x() and point_f.y() == point.y():
             # map integer coordinates

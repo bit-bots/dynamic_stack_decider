@@ -19,6 +19,7 @@ def main() -> None:
             with zipfile.ZipFile(wheel) as archive:
                 files = archive.namelist()
                 assert f"{name}/__init__.py" in files
+                assert f"{name}/py.typed" in files
                 assert not any(path.startswith(("test/", "tests/")) for path in files)
                 assert any(path.endswith("/package.xml") for path in files)
                 if name.endswith("visualization"):
