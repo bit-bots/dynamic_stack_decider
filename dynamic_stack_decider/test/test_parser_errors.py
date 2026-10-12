@@ -8,7 +8,6 @@ import os
 import tempfile
 
 import pytest
-
 from dynamic_stack_decider.parser import DsdParser, ParseError
 
 

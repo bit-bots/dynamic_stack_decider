@@ -5,7 +5,6 @@ import pkgutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Optional
 
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
@@ -48,9 +47,9 @@ def discover_elements(path: str) -> dict[str, AbstractStackElement]:
             elements.update(
                 inspect.getmembers(
                     module,
-                    lambda m: inspect.isclass(m)
-                    and inspect.getmodule(m) == module
-                    and issubclass(m, AbstractStackElement),
+                    lambda m: (
+                        inspect.isclass(m) and inspect.getmodule(m) == module and issubclass(m, AbstractStackElement)
+                    ),
                 )
             )
         except Exception as e:
@@ -106,9 +105,9 @@ class DSD:
     stack_reevaluate = False
     do_not_reevaluate = False
     old_representation = ""
-    debug_active_action_cache: Optional[str] = None
+    debug_active_action_cache: str | None = None
 
-    def __init__(self, blackboard, debug_topic: str = None, node: Optional[Node] = None):
+    def __init__(self, blackboard, debug_topic: str = None, node: Node | None = None):
         """
         :param blackboard: Blackboard instance which will be available to all modules
         :param debug_topic:  Topic on which debug data should be published
@@ -117,7 +116,7 @@ class DSD:
         self.blackboard = blackboard
         self.node = node
 
-        self.tree: Optional[Tree] = None
+        self.tree: Tree | None = None
         # The stack is implemented as a list of tuples consisting of the tree element
         # and the actual module instance
         self.stack: list[tuple[AbstractTreeElement, AbstractStackElement]] = []
@@ -182,17 +181,17 @@ class DSD:
         :param element: The starting element
         """
         if isinstance(element, ActionTreeElement):
-            assert (
-                element.name in self.actions
-            ), f'Provided element "{element.name}" was not found in registered actions!'
+            assert element.name in self.actions, (
+                f'Provided element "{element.name}" was not found in registered actions!'
+            )
             element.module = self.actions[element.name]
             # Bind the rest of the chain (e.g. the following actions of a sequence)
             if element.next_element is not None:
                 self._bind_modules(element.next_element)
         elif isinstance(element, DecisionTreeElement):
-            assert (
-                element.name in self.decisions
-            ), f'Provided element "{element.name}" was not found in registered decisions!'
+            assert element.name in self.decisions, (
+                f'Provided element "{element.name}" was not found in registered decisions!'
+            )
             element.module = self.decisions[element.name]
             for child in element.children.values():
                 self._bind_modules(child)

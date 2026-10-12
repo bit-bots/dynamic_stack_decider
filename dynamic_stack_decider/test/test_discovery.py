@@ -7,7 +7,6 @@ the type filtering and the resilience against modules that fail to import.
 import os
 
 import pytest
-
 from dynamic_stack_decider.abstract_action_element import AbstractActionElement
 from dynamic_stack_decider.abstract_decision_element import AbstractDecisionElement
 from dynamic_stack_decider.dsd import DSD, discover_elements

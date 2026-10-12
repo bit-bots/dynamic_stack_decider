@@ -7,7 +7,7 @@ class Tree:
 
     def __init__(self):
         # The root element of the tree
-        self.root_element: Optional[AbstractTreeElement] = None
+        self.root_element: AbstractTreeElement | None = None
         self.parameter_list = []
 
     def set_root_element(self, element: "AbstractTreeElement"):
@@ -38,8 +38,8 @@ class AbstractTreeElement:
         self,
         name: str,
         parent: Optional["AbstractTreeElement"],
-        parameters: Optional[dict] = None,
-        unset_parameters: Optional[dict] = None,
+        parameters: dict | None = None,
+        unset_parameters: dict | None = None,
     ):
         self.name = name
         self.parent = parent
@@ -102,7 +102,7 @@ class DecisionTreeElement(AbstractTreeElement):
         self.children[activating_result] = element
         element.set_activation_reason(activating_result)
 
-    def get_child(self, activating_result: str) -> Optional[AbstractTreeElement]:
+    def get_child(self, activating_result: str) -> AbstractTreeElement | None:
         """Get the child for a given result"""
         if not activating_result:
             # give advice about error
@@ -159,7 +159,7 @@ class ActionTreeElement(AbstractTreeElement):
         super().__init__(name, parent, parameters, unset_parameters)
         # The element that is activated when this action pops itself. None if this
         # action is the last (or only) element in its chain.
-        self.next_element: Optional[AbstractTreeElement] = None
+        self.next_element: AbstractTreeElement | None = None
 
     def set_activation_reason(self, reason):
         """Set the activation reason for this action and propagate it along the chain"""

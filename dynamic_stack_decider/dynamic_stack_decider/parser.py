@@ -1,6 +1,5 @@
 import copy
 import re
-from typing import Optional
 
 import yaml
 from rclpy.node import Node
@@ -9,7 +8,7 @@ from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, T
 
 
 class DsdParser:
-    def __init__(self, node: Optional[Node] = None):
+    def __init__(self, node: Node | None = None):
         self.node = node
 
     def parse(self, file_path: str) -> Tree:
@@ -266,12 +265,8 @@ class DsdParser:
         subtree = subtrees[name]
         if (set(parameters.keys()) | set(unset_parameters.keys())) != set(subtree.parameter_list):
             raise ParseError(
-                "Error parsing line {}: Invalid parameters specified.\n"
-                "Available parameters are {}, specified parameters are {}.".format(
-                    lnr,
-                    set(parameters.keys()) | set(unset_parameters.keys()),
-                    set(subtree.parameter_list),
-                )
+                f"Error parsing line {lnr}: Invalid parameters specified.\n"
+                f"Available parameters are {set(parameters.keys()) | set(unset_parameters.keys())}, specified parameters are {set(subtree.parameter_list)}."
             )
         return subtree, parameters, unset_parameters
 

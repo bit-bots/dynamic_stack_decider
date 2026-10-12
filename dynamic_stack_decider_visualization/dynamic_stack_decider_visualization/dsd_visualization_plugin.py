@@ -31,7 +31,6 @@
 import os
 import sys
 import uuid
-from typing import Optional
 
 import pydot
 from ament_index_python import get_package_share_directory
@@ -58,7 +57,7 @@ class DsdVizPlugin(Plugin):
 
         # Ensure startup state
         self.freeze = False  # Controls whether the state should be updated from remote
-        self.dsd_follower: Optional[DsdFollower] = None
+        self.dsd_follower: DsdFollower | None = None
         self.running_dsd_instances: dict[str, str] = {}
         self._init_plugin(context)
 

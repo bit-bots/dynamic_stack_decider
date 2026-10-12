@@ -5,7 +5,6 @@ stable ``id`` and the ``next`` chain link.
 """
 
 import pytest
-
 from dynamic_stack_decider.tree import ActionTreeElement, DecisionTreeElement, Tree
 
 
